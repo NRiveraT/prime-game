@@ -1,0 +1,86 @@
+[gd_scene format=3 uid="uid://mgp02mkor0at"]
+
+[ext_resource type="Script" uid="uid://c6xqis34sgipu" path="res://TestInterface.cs" id="1_a0tk4"]
+[ext_resource type="Script" uid="uid://dv68x3tly8mgk" path="res://Framework/Actor.cs" id="3_a0tk4"]
+[ext_resource type="PackedScene" uid="uid://bw5ncm2f3jtw0" path="res://mos_eisley.tscn" id="3_jka67"]
+[ext_resource type="Script" uid="uid://c5jvky8xjcha7" path="res://Framework/Pawn.cs" id="4_r3fl7"]
+[ext_resource type="Texture2D" uid="uid://dr8r7u1yx8a4e" path="res://citrus_orchard_road_puresky_8k.hdr" id="6_i5arm"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_i5arm"]
+panorama = ExtResource("6_i5arm")
+
+[sub_resource type="Sky" id="Sky_a0tk4"]
+sky_material = SubResource("PanoramaSkyMaterial_i5arm")
+
+[sub_resource type="Environment" id="Environment_r3fl7"]
+background_mode = 2
+background_intensity = 7000.0
+sky = SubResource("Sky_a0tk4")
+reflected_light_source = 2
+ssr_enabled = true
+ssr_max_steps = 512
+ssao_enabled = true
+ssil_enabled = true
+sdfgi_y_scale = 0
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jka67"]
+metallic = 1.0
+roughness = 0.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_r3fl7"]
+size = Vector3(0.5, 0.5, 2)
+
+[node name="Node3D" type="Node3D" unique_id=1407163047 node_paths=PackedStringArray("ActorNode")]
+script = ExtResource("1_a0tk4")
+ActorNode = NodePath("Pawn")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1853639222]
+transform = Transform3D(0.5386903, 0.75557894, -0.37271032, 4.4703484e-08, 0.4423841, 0.89682555, 0.8425038, -0.48311135, 0.23830803, 0, 1.1150553, 0)
+light_bake_mode = 1
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2085624144]
+environment = SubResource("Environment_r3fl7")
+
+[node name="MosEisley" parent="." unique_id=1358836031 instance=ExtResource("3_jka67")]
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1506431198]
+transform = Transform3D(0.42235634, 0, -0.9064299, 0, 1, 0, 0.9064299, 0, 0.42235634, 0.013940907, 1.6304227, 2.0836046)
+
+[node name="CSGSphere3D" type="CSGSphere3D" parent="." unique_id=417302737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0159698, 1.4197912, 1.7151487)
+gi_mode = 0
+radial_segments = 32
+rings = 16
+material = SubResource("StandardMaterial3D_jka67")
+
+[node name="Actor" type="Node3D" parent="." unique_id=47734957]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.9015138, 1.2714345, 0)
+script = ExtResource("3_a0tk4")
+metadata/_custom_type_script = "uid://dv68x3tly8mgk"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Actor" unique_id=597423888]
+gi_mode = 2
+mesh = SubResource("BoxMesh_a0tk4")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="Actor" unique_id=1722245124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+gi_mode = 2
+mesh = SubResource("BoxMesh_r3fl7")
+
+[node name="Pawn" type="Node3D" parent="." unique_id=356246311]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8580395, 0.5146694, 0)
+script = ExtResource("4_r3fl7")
+metadata/_custom_type_script = "uid://c5jvky8xjcha7"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Pawn" unique_id=362929481]
+gi_mode = 2
+mesh = SubResource("BoxMesh_a0tk4")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="Pawn" unique_id=932546518]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+gi_mode = 2
+mesh = SubResource("BoxMesh_r3fl7")

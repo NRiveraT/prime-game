@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://dvxbtgc460gkh"]
+
+[ext_resource type="Script" uid="uid://bweq6sfgqj4d3" path="res://Source/Player/Player.cs" id="1_fixdj"]
+[ext_resource type="Script" uid="uid://cpdqs1g6wvuh7" path="res://Source/Player/PlayerSpringArm.cs" id="2_kpjcp"]
+[ext_resource type="Script" uid="uid://bc54vhjd4g1ij" path="res://Source/Core/StateMachine/StateMachine.cs" id="3_e80uo"]
+[ext_resource type="Script" uid="uid://bliv0xuytmxxy" path="res://Source/Player/States/PlayerMovementState.cs" id="4_cxr5p"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_fixdj"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_yd0bt"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_fixdj"]
+size = Vector3(1, 1, 0.25)
+
+[node name="Player" type="Node3D" unique_id=1415424238 node_paths=PackedStringArray("Body")]
+script = ExtResource("1_fixdj")
+Speed = 10.0
+Body = NodePath("CharacterBody")
+Tags = Array[StringName]([])
+metadata/_custom_type_script = "uid://cy1cmyg5vg3it"
+
+[node name="CharacterBody" type="CharacterBody3D" parent="." unique_id=1798264820]
+floor_constant_speed = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody" unique_id=1521801654]
+shape = SubResource("CylinderShape3D_fixdj")
+debug_color = Color(1.2204381, 0.54947305, 0.32581806, 0.87058824)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1939419155]
+gi_mode = 2
+mesh = SubResource("CapsuleMesh_yd0bt")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D" unique_id=1982450756]
+transform = Transform3D(1.9106857e-15, -1.3113416e-07, -1, 1, 4.371139e-08, -3.821371e-15, 4.371139e-08, -1, 1.3113416e-07, -1.3113416e-07, 4.371139e-08, -0.5)
+gi_mode = 2
+mesh = SubResource("PrismMesh_fixdj")
+
+[node name="SpringArm3D" type="SpringArm3D" parent="." unique_id=196293562]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+spring_length = 5.0
+script = ExtResource("2_kpjcp")
+UseControlRotation = true
+metadata/_custom_type_script = "uid://cpdqs1g6wvuh7"
+
+[node name="Camera3D" type="Camera3D" parent="SpringArm3D" unique_id=2086740654]
+current = true
+
+[node name="StateMachine" type="Node" parent="." unique_id=7352552 node_paths=PackedStringArray("States")]
+script = ExtResource("3_e80uo")
+States = [null]
+metadata/_custom_type_script = "uid://bc54vhjd4g1ij"
+
+[node name="PlayerMovementState" type="Node" parent="StateMachine" unique_id=202083917]
+script = ExtResource("4_cxr5p")
+metadata/_custom_type_script = "uid://bliv0xuytmxxy"

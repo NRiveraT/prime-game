@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://c4monvu885r5w"]
+
+[ext_resource type="Script" uid="uid://cnwgntgr72jmy" path="res://Autoloads/GameBase.cs" id="1_3re7u"]
+[ext_resource type="PackedScene" uid="uid://brhogehpfxv2c" path="res://PlayerController.tscn" id="2_8ou7b"]
+[ext_resource type="PackedScene" uid="uid://dvxbtgc460gkh" path="res://Player.tscn" id="3_du5sl"]
+
+[node name="Game" type="Node" unique_id=785024665]
+script = ExtResource("1_3re7u")
+PlayerControllerScene = ExtResource("2_8ou7b")
+PlayerCharacterScene = ExtResource("3_du5sl")
+metadata/_custom_type_script = "uid://cnwgntgr72jmy"

@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://brhogehpfxv2c"]
+
+[ext_resource type="Script" uid="uid://cqvhjw0jbrdpo" path="res://Source/Player/PlayerController.cs" id="1_2be4l"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_2be4l"]
+
+[node name="PlayerController" type="Node3D" unique_id=1813459242]
+script = ExtResource("1_2be4l")
+metadata/_custom_type_script = "uid://cqvhjw0jbrdpo"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1299389966]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
+mesh = SubResource("PrismMesh_2be4l")

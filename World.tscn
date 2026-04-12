@@ -1,0 +1,183 @@
+[gd_scene format=4 uid="uid://dnjscu2t7kqlf"]
+
+[ext_resource type="Script" uid="uid://c6xqis34sgipu" path="res://World.cs" id="1_3mrqo"]
+[ext_resource type="Texture2D" uid="uid://dr8r7u1yx8a4e" path="res://citrus_orchard_road_puresky_8k.hdr" id="2_sb48q"]
+[ext_resource type="Script" uid="uid://dv68x3tly8mgk" path="res://Source/Core/Actor/Actor.cs" id="2_u44n3"]
+[ext_resource type="LightmapGIData" uid="uid://mguwyncoljen" path="res://Game.lmbake" id="3_r0x5m"]
+[ext_resource type="Script" uid="uid://b0rmohu0xen5b" path="res://FPSLabel.cs" id="5_r0x5m"]
+[ext_resource type="VoxelGIData" uid="uid://bctjwpyxm077u" path="res://Game.VoxelGI_data.res" id="6_r0x5m"]
+[ext_resource type="Script" uid="uid://cva0x15bjia4v" path="res://Source/Level/Loaders/LoadTrigger.cs" id="7_3mrqo"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_t88pq"]
+panorama = ExtResource("2_sb48q")
+
+[sub_resource type="Sky" id="Sky_r0x5m"]
+sky_material = SubResource("PanoramaSkyMaterial_t88pq")
+
+[sub_resource type="Environment" id="Environment_3mrqo"]
+background_mode = 2
+sky = SubResource("Sky_r0x5m")
+tonemap_mode = 4
+ssr_enabled = true
+ssr_max_steps = 512
+ssao_enabled = true
+ssil_enabled = true
+sdfgi_use_occlusion = true
+sdfgi_min_cell_size = 1.0
+sdfgi_y_scale = 0
+glow_enabled = true
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_t88pq"]
+auto_exposure_enabled = true
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_3mrqo"]
+lightmap_size_hint = Vector2i(2934, 2614)
+_surfaces = [{
+"aabb": AABB(-25, 0, -25, 50, 20, 50),
+"attribute_data": PackedByteArray("AACAPwAAAAAD0Ag8eTV9PwAAAAAAAAAAA9AIPPDvVT8AAIA/AACAP6j0sj55NX0/AACAPwAAAADiKbA+hYjFPgAAAAAAAAAA4imwPn3MRD8AAIA/AACAP8DcPTuFiMU+AACAPwAAAABtVzE/jMlhPwAAAAAAAAAAbVcxP6WC/z4AAIA/AACAP3ZUVD+MyWE/AACAPwAAgD+msTI5upFIOQAAQD8AAEA/gQevPb10xD0AAAAAAACAP6axMjmGKcQ+AABAPwAAgD70GIM+vXTEPQAAAAAAAIA/qPSyPvDvVT8AAIA+AABAP4EHrz1pJZM+AACAPwAAgD+terM+Teg6PwAAgD8AAAAArXqzPtUtYj8AAAAAAAAAAGsUMT/VLWI/AAAAAAAAAAB+xK4+hinEPgAAAAAAAIA/wNw9O33MRD8AAAAAAACAP2sUMT9N6Do/AACAPwAAgD8Y6Eo/yEzoPQAAgD8AAAAAGOhKP6Yj/j4AAAAAAAAAAA/rJz+mI/4+AAAAAAAAgD92VFQ/pYL/PgAAgD8AAAAAfsSuPrqRSDkAAAAAAACAPw/rJz/ITOg9AACAPgAAgD70GIM+aSWTPgAAgD8AAAAAdXnYPnfzfz8AAIA/AACAPyLaOj93838/AAAAAAAAAAB1edg+DHliPwAAgD8AAAAAApwmP5KPGTwAAIA/AACAPzX9rz6Sjxk8AAAAAAAAAAACnCY/tUa1PgAAgD8AAAAAeZdUP5hVUT8AAIA/AACAP9Xabj+YVVE/AAAAAAAAAAB5l1Q/+DDyPgAAgD8AAIA/ShWyPvO/xD4AAAAAAACAPw2oJz/zv8Q+chxHP3IcRz/pBdU+jvfrPnIcRz85jmM+6QXVPkkBJz8AAAAAAACAPyLaOj8MeWI/OY5jPnIcRz+9LxY/jvfrPgAAgD8AAIA/GitLPwP2yD0AAAAAAAAAAHZuZT+5t+I+AACAPwAAAAB2bmU/A/bIPQAAAAAAAAAADagnPxadOj8AAAAAAACAPzX9rz61RrU+AAAAAAAAgD8aK0s/ubfiPgAAgD8AAIA/ebFlP0xaST0AAAAAAAAAANX0fz+Cpck+AACAPwAAAAB5sWU/gqXJPgAAAAAAAIA/1dpuP/gw8j4AAIA/AAAAAEoVsj4WnTo/AAAAAAAAgD/V9H8/TFpJPTmOYz45jmM+vS8WP0kBJz8ubhg/AAAAAEQnLT+kzrM9Lm4YPwAAgD/53Vg/pM6zPV3c8D4AAAAARCctP3lIij0AAIA/oyPPPkhfej8nTuM+AACAP9KRBz9IX3o/sq/tPgAAAADSkQc/k6hOP7Kv7T5d3PA+AACAP/ndWD95SIo9AACAPy5uGD9eOCc/b/6XPAAAAAAubhg/E+9SP2/+lzwAAIA/XdzwPl44Jz+OCx89AAAAAKMjzz6TqE4/J07jPi5uGD8AAIA/IHJ2PxyJTD9d3PA+AACAP/kRez8ciUw/XdzwPgAAAAD5EXs/wpl9PwAAAABd3PA+E+9SP44LHz0ubhg/AAAAACBydj/CmX0/"),
+"format": 34359742519,
+"index_count": 132,
+"index_data": PackedByteArray("AAABAAIAAwAEAAUABgAHAAgACQAKAAsACQAMAAoAAgABAA0ACwAKAA4ADwAQABEACwAOABIABAATAAUADwARABQAFQAWABcACAAHABgACQAZAAwAFQAXABoAGQAbAAwAEgAOABsAGQASABsAHAAdAB4AHwAgACEAIgAjACQAJQAmACcAJQAnACgAHQApAB4AJwAmACoAKwAsAC0AJgAuACoAIQAgAC8AKwAwACwAMQAyADMAIwA0ACQAJQAoADUAMQA2ADIAKAA3ADUAKgAuADcANQA3AC4AOAA5ADoAOwA8AD0AOQA+ADoAPwBAAEEAOwA9AEIAQwBEAEUAQABGAEEAQwBFAEcA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 72,
+"vertex_data": PackedByteArray("AADIwQAAAAAAAMjBAADIwQAAoEEAAMjBAADIwQAAAAAAAMhBAADIwQAAAAAAAMjBAADIwQAAAAAAAMhBAADIQQAAAAAAAMjBAADIwQAAAAAAAMjBAADIQQAAAAAAAMjBAADIwQAAoEEAAMjBAADIwQAAoEEAAMjBAABIwQAAoEEAAEjBAADIwQAAoEEAAMhBAABIQQAAoEEAAEjBAADIwQAAoEEAAMhBAABIwQAAoEEAAEhBAADIwQAAAAAAAMhBAADIwQAAoEEAAMhBAADIQQAAoEEAAMhBAADIQQAAoEEAAMhBAADIQQAAAAAAAMhBAADIQQAAAAAAAMhBAADIQQAAAAAAAMjBAADIQQAAAAAAAMhBAADIQQAAoEEAAMhBAADIQQAAoEEAAMjBAADIQQAAoEEAAMjBAADIQQAAoEEAAMjBAABIQQAAoEEAAEhBAAC0wQAAIEAAALTBAAC0wQAAIEAAALRBAAC0wQAAjEEAALTBAAC0wQAAIEAAALTBAAC0QQAAIEAAALTBAAC0wQAAIEAAALRBAAC0wQAAIEAAALTBAAC0wQAAjEEAALTBAAC0QQAAIEAAALTBAAC0wQAAjEEAALTBAAC0wQAAjEEAALRBAABIwQAAjEEAAEjBAABIQQAAjEEAAEjBAAC0wQAAjEEAALRBAABIwQAAjEEAAEhBAAC0wQAAIEAAALRBAAC0QQAAjEEAALRBAAC0wQAAjEEAALRBAAC0QQAAjEEAALRBAAC0QQAAIEAAALRBAAC0QQAAIEAAALRBAAC0QQAAIEAAALTBAAC0QQAAjEEAALRBAAC0QQAAIEAAALRBAAC0QQAAjEEAALTBAAC0QQAAjEEAALTBAAC0QQAAjEEAALTBAABIQQAAjEEAAEhBAABIwQAAjEEAAEjBAABIwQAAjEEAAEhBAABIwQAAoEEAAEjBAABIwQAAjEEAAEjBAABIwQAAoEEAAEjBAABIQQAAoEEAAEjBAABIwQAAoEEAAEhBAABIwQAAjEEAAEhBAABIQQAAjEEAAEhBAABIwQAAoEEAAEhBAABIQQAAjEEAAEjBAABIQQAAjEEAAEjBAABIQQAAoEEAAEjBAABIQQAAoEEAAEhBAABIQQAAoEEAAEhBAABIQQAAjEEAAEhBAAAAgP9//n8AAACA/3/+fwAAAID/f/5/AIAAAP//AAAAgAAA//8AAACAAAD//wAA/////wAA/z//////AAD/P/////8AAP8/AID/////AAAAgP////8AAACA/////wAAAID/////AAAAAACA/3/+fwCA/////wAA/3//fwAA/z//f/9/AAD/P/9//38AAP8/AID/////AAAAgAAA//8AAP9//38AAP8///8AgP9//n///wCA/3/+f///AID/f/5//////wAA/z8AgP////8AAP//AID/f/5/AID/////AAD//wCA/38AgP//AID/fwCA//8AgP9/AIAAgP///////wCA////////AID/////////f/9/AAD/v/9//38AAP+//3//fwAA/78AgAAA/////wCAAAD/////AIAAAP////8AgAAA////////AID/fwCAAIAAAP//////////AAD/v/////8AAP+//////wAA/78AgAAA/////wCA/////////////wAA/78AAACA/38AgAAAAID/fwCAAAAAgP9/AID/f/9/AAD/vwCAAAD/////AAAAgP9/AIAAgAAA////////AID/fwCA//8AgP9/AID//wCA/38AgP9//38AAP+//3//fwAA/7//f/9/AAD/v///AID/fwCA/////wAA/7//////AAD/v/////8AAP+//3//fwAA/78AAACA/38AgAAAAID/fwCAAAAAgP9/AID/////AAD/vwAAAID/fwCA")
+}]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_r0x5m"]
+metallic = 1.0
+roughness = 0.0
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_joorw"]
+size = Vector3(3.2822266, 4.263672, 3.6933594)
+
+[node name="RootWorld" type="Node3D" unique_id=546022045]
+script = ExtResource("1_3mrqo")
+metadata/_custom_type_script = "uid://c6xqis34sgipu"
+
+[node name="Control" type="Control" parent="." unique_id=1311164112]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Label" type="Label" parent="Control" unique_id=1833261350]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+theme_override_colors/font_color = Color(0.25025597, 0.5404259, 0.16295412, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85882354)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_constants/shadow_outline_size = 3
+theme_override_font_sizes/font_size = 24
+script = ExtResource("5_r0x5m")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2107406426]
+environment = SubResource("Environment_3mrqo")
+camera_attributes = SubResource("CameraAttributesPractical_t88pq")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=113069508]
+transform = Transform3D(-0.7890841, -0.3227895, 0.5226407, 0, 0.8508111, 0.5254717, -0.6142853, 0.41464132, -0.67136145, 0, 0, 0)
+shadow_enabled = true
+
+[node name="ReflectionProbe" type="ReflectionProbe" parent="." unique_id=778356333]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.766125, 0)
+size = Vector3(48.956055, 30.8833, 58.90918)
+box_projection = true
+enable_shadows = true
+ambient_mode = 0
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=935664930]
+visible = false
+use_collision = true
+metadata/_edit_group_ = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1918883003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
+use_collision = true
+size = Vector3(50, 20, 50)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1404523371]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
+gi_mode = 0
+operation = 2
+use_collision = true
+size = Vector3(45, 15, 45)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1106331369]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 19.408625, 0)
+gi_mode = 0
+operation = 2
+size = Vector3(25, 20, 25)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1369207389]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.217, 10, 0)
+gi_mode = 0
+operation = 2
+use_collision = true
+size = Vector3(22.851563, 15, 6.517578)
+
+[node name="VoxelGI" type="VoxelGI" parent="CSGCombiner3D" unique_id=48568653]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1431274, 8.068359, 0)
+size = Vector3(65.680786, 36.13672, 56.161133)
+camera_attributes = SubResource("CameraAttributesPractical_t88pq")
+data = ExtResource("6_r0x5m")
+
+[node name="LightmapGI" type="LightmapGI" parent="." unique_id=494752224]
+quality = 2
+directional = true
+max_texture_size = 4096
+camera_attributes = SubResource("CameraAttributesPractical_t88pq")
+generate_probes_subdiv = 3
+light_data = ExtResource("3_r0x5m")
+metadata/_edit_group_ = true
+
+[node name="CSGBakedMeshInstance3D" type="MeshInstance3D" parent="LightmapGI" unique_id=1640338897]
+mesh = SubResource("ArrayMesh_3mrqo")
+
+[node name="Actor" type="Node3D" parent="." unique_id=1757759563]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.3261375, 3.5271769, 0)
+script = ExtResource("2_u44n3")
+UniqueId = &"17302838630"
+Tags = []
+metadata/_custom_type_script = "uid://dv68x3tly8mgk"
+
+[node name="CSGSphere3D" type="CSGSphere3D" parent="Actor" unique_id=901665912]
+gi_mode = 2
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Actor" unique_id=1780909357]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.40908203, 0, 0)
+gi_mode = 2
+size = Vector3(0.9181641, 0.1, 0.1)
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=280669450]
+transform = Transform3D(0.93087655, 0, 0.3653339, 0, 1, 0, -0.3653339, 0, 0.93087655, 3.262526, 4.1647053, 7.2274666)
+visible = false
+current = true
+
+[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=2089750399]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.013517, 5.577462, 0.4384389)
+light_intensity_lumens = 100.0
+light_color = Color(1, 0.029999971, 0.029999971, 1)
+light_energy = 100000.0
+light_bake_mode = 1
+shadow_enabled = true
+omni_range = 19.448477
+
+[node name="CSGSphere3D" type="CSGSphere3D" parent="." unique_id=1253503151]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.3998713, -1.5842061)
+gi_mode = 0
+radial_segments = 32
+rings = 16
+material = SubResource("StandardMaterial3D_r0x5m")
+
+[node name="LoadTrigger" type="Area3D" parent="." unique_id=258332871]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.2437725, 4.6834316, 9.536743e-07)
+script = ExtResource("7_3mrqo")
+metadata/_custom_type_script = "uid://cva0x15bjia4v"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LoadTrigger" unique_id=859181325]
+shape = SubResource("BoxShape3D_joorw")
+debug_color = Color(0, 11.618606, 13.50434, 0.41960785)
