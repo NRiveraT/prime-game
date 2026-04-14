@@ -1,0 +1,21 @@
+<Project Sdk="Godot.NET.Sdk/4.7.0-dev.3">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Source\Level\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="addon\**" />
+    <Compile Remove="addons\debug_draw_3d-1.7.3\**" />
+    <Compile Remove="addons\DebugDraw\**" />
+    <Compile Remove="RTScene_old.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="addon\**" />
+    <EmbeddedResource Remove="addons\debug_draw_3d-1.7.3\**" />
+    <EmbeddedResource Remove="addons\DebugDraw\**" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dedveulo64whj"
+path="res://.godot/imported/rt_shadows.glsl-e2575f01ac51ef8c59e524a2b56770ed.res"
+
+[deps]
+
+source_file="res://Shaders/rt_shadows.glsl"
+dest_files=["res://.godot/imported/rt_shadows.glsl-e2575f01ac51ef8c59e524a2b56770ed.res"]
+
+[params]
+

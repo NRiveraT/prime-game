@@ -16,18 +16,20 @@ public partial class Player : Character
     
     public override void _PhysicsProcess(double delta)
     {
-        if (Body == null) return;
+        if (CharacterBody == null) return;
+        
+        DebugDraw3D.DrawArrow(GlobalPosition, GlobalPosition + GetActorForwardVector() * 2, Colors.Red, 0.1f);
         
         Vector3 currentVelocity = GetVelocity();
         
         // Add the gravity.
-        if (!Body.IsOnFloor())
+        if (!CharacterBody.IsOnFloor())
         {
-            currentVelocity += Body.GetGravity() * (float)delta;
+            currentVelocity += CharacterBody.GetGravity() * (float)delta;
         }
         
         // Handle Jump.
-        if (Input.IsActionJustPressed("ui_accept") && Body.IsOnFloor())
+        if (Input.IsActionJustPressed("ui_accept") && CharacterBody.IsOnFloor())
         {
             currentVelocity.Y = JumpVelocity;
         }
@@ -43,12 +45,12 @@ public partial class Player : Character
         }
         else
         {
-            currentVelocity.X = Mathf.MoveToward(Body.Velocity.X, 0, Speed);
-            currentVelocity.Z = Mathf.MoveToward(Body.Velocity.Z, 0, Speed);
+            currentVelocity.X = Mathf.MoveToward(CharacterBody.Velocity.X, 0, Speed);
+            currentVelocity.Z = Mathf.MoveToward(CharacterBody.Velocity.Z, 0, Speed);
         }
 
-        Body.Velocity = currentVelocity;
-        Body.MoveAndSlide();
+        CharacterBody.Velocity = currentVelocity;
+        CharacterBody.MoveAndSlide();
         
         base._PhysicsProcess(delta);
     }

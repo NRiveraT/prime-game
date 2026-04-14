@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bmr2rqi0jc7vt"
+path="res://.godot/imported/rtao.glsl-a4bf254ab15302eeef50a0da59db53c9.res"
+
+[deps]
+
+source_file="res://Shaders/rtao.glsl"
+dest_files=["res://.godot/imported/rtao.glsl-a4bf254ab15302eeef50a0da59db53c9.res"]
+
+[params]
+

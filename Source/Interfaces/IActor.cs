@@ -14,7 +14,7 @@ public interface IActor
     public Vector3 GetActorRightVector();
     public Vector3 GetActorUpVector();
     public Vector3 GetVelocity();
-    
+    void InitializeComponents();
     void ResolveActorCollision(Node body);
     void OnActorHit(HitInfo hitInfo);
 }

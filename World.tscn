@@ -4,9 +4,11 @@
 [ext_resource type="Texture2D" uid="uid://dr8r7u1yx8a4e" path="res://citrus_orchard_road_puresky_8k.hdr" id="2_sb48q"]
 [ext_resource type="Script" uid="uid://dv68x3tly8mgk" path="res://Source/Core/Actor/Actor.cs" id="2_u44n3"]
 [ext_resource type="LightmapGIData" uid="uid://mguwyncoljen" path="res://Game.lmbake" id="3_r0x5m"]
+[ext_resource type="Script" uid="uid://dy0cggruy8mi5" path="res://Source/Core/RT/RTShadowEffect.gd" id="4_bah7m"]
 [ext_resource type="Script" uid="uid://b0rmohu0xen5b" path="res://FPSLabel.cs" id="5_r0x5m"]
+[ext_resource type="Script" uid="uid://bapf76hmv7kkb" path="res://Source/Core/RT/RTAOEffect.gd" id="6_fv4w7"]
 [ext_resource type="VoxelGIData" uid="uid://bctjwpyxm077u" path="res://Game.VoxelGI_data.res" id="6_r0x5m"]
-[ext_resource type="Script" uid="uid://cva0x15bjia4v" path="res://Source/Level/Loaders/LoadTrigger.cs" id="7_3mrqo"]
+[ext_resource type="Script" uid="uid://5ao4sxv5tx2c" path="res://Source/Core/RT/RTScene.gd" id="8_fv4w7"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_t88pq"]
 panorama = ExtResource("2_sb48q")
@@ -30,6 +32,44 @@ glow_enabled = true
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_t88pq"]
 auto_exposure_enabled = true
 
+[sub_resource type="CompositorEffect" id="CompositorEffect_fvag4"]
+resource_local_to_scene = false
+resource_name = ""
+enabled = true
+effect_callback_type = 4
+needs_motion_vectors = false
+needs_normal_roughness = true
+script = ExtResource("4_bah7m")
+metadata/_custom_type_script = "uid://dy0cggruy8mi5"
+
+[sub_resource type="CompositorEffect" id="CompositorEffect_kva58"]
+resource_local_to_scene = false
+resource_name = ""
+enabled = true
+effect_callback_type = 4
+needs_motion_vectors = false
+needs_normal_roughness = true
+script = ExtResource("6_fv4w7")
+ao_strength = 1.0
+
+[sub_resource type="Compositor" id="Compositor_kva58"]
+compositor_effects = Array[CompositorEffect]([SubResource("CompositorEffect_fvag4"), SubResource("CompositorEffect_kva58")])
+
+[sub_resource type="GDScript" id="GDScript_bah7m"]
+script/source = "extends DirectionalLight3D
+
+var t : float
+
+# Called when the node enters the scene tree for the first time.
+func _ready() -> void:
+	pass # Replace with function body.
+
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta: float) -> void:
+	rotate_y(0 * delta)
+"
+
 [sub_resource type="ArrayMesh" id="ArrayMesh_3mrqo"]
 lightmap_size_hint = Vector2i(2934, 2614)
 _surfaces = [{
@@ -44,16 +84,23 @@ _surfaces = [{
 "vertex_data": PackedByteArray("AADIwQAAAAAAAMjBAADIwQAAoEEAAMjBAADIwQAAAAAAAMhBAADIwQAAAAAAAMjBAADIwQAAAAAAAMhBAADIQQAAAAAAAMjBAADIwQAAAAAAAMjBAADIQQAAAAAAAMjBAADIwQAAoEEAAMjBAADIwQAAoEEAAMjBAABIwQAAoEEAAEjBAADIwQAAoEEAAMhBAABIQQAAoEEAAEjBAADIwQAAoEEAAMhBAABIwQAAoEEAAEhBAADIwQAAAAAAAMhBAADIwQAAoEEAAMhBAADIQQAAoEEAAMhBAADIQQAAoEEAAMhBAADIQQAAAAAAAMhBAADIQQAAAAAAAMhBAADIQQAAAAAAAMjBAADIQQAAAAAAAMhBAADIQQAAoEEAAMhBAADIQQAAoEEAAMjBAADIQQAAoEEAAMjBAADIQQAAoEEAAMjBAABIQQAAoEEAAEhBAAC0wQAAIEAAALTBAAC0wQAAIEAAALRBAAC0wQAAjEEAALTBAAC0wQAAIEAAALTBAAC0QQAAIEAAALTBAAC0wQAAIEAAALRBAAC0wQAAIEAAALTBAAC0wQAAjEEAALTBAAC0QQAAIEAAALTBAAC0wQAAjEEAALTBAAC0wQAAjEEAALRBAABIwQAAjEEAAEjBAABIQQAAjEEAAEjBAAC0wQAAjEEAALRBAABIwQAAjEEAAEhBAAC0wQAAIEAAALRBAAC0QQAAjEEAALRBAAC0wQAAjEEAALRBAAC0QQAAjEEAALRBAAC0QQAAIEAAALRBAAC0QQAAIEAAALRBAAC0QQAAIEAAALTBAAC0QQAAjEEAALRBAAC0QQAAIEAAALRBAAC0QQAAjEEAALTBAAC0QQAAjEEAALTBAAC0QQAAjEEAALTBAABIQQAAjEEAAEhBAABIwQAAjEEAAEjBAABIwQAAjEEAAEhBAABIwQAAoEEAAEjBAABIwQAAjEEAAEjBAABIwQAAoEEAAEjBAABIQQAAoEEAAEjBAABIwQAAoEEAAEhBAABIwQAAjEEAAEhBAABIQQAAjEEAAEhBAABIwQAAoEEAAEhBAABIQQAAjEEAAEjBAABIQQAAjEEAAEjBAABIQQAAoEEAAEjBAABIQQAAoEEAAEhBAABIQQAAoEEAAEhBAABIQQAAjEEAAEhBAAAAgP9//n8AAACA/3/+fwAAAID/f/5/AIAAAP//AAAAgAAA//8AAACAAAD//wAA/////wAA/z//////AAD/P/////8AAP8/AID/////AAAAgP////8AAACA/////wAAAID/////AAAAAACA/3/+fwCA/////wAA/3//fwAA/z//f/9/AAD/P/9//38AAP8/AID/////AAAAgAAA//8AAP9//38AAP8///8AgP9//n///wCA/3/+f///AID/f/5//////wAA/z8AgP////8AAP//AID/f/5/AID/////AAD//wCA/38AgP//AID/fwCA//8AgP9/AIAAgP///////wCA////////AID/////////f/9/AAD/v/9//38AAP+//3//fwAA/78AgAAA/////wCAAAD/////AIAAAP////8AgAAA////////AID/fwCAAIAAAP//////////AAD/v/////8AAP+//////wAA/78AgAAA/////wCA/////////////wAA/78AAACA/38AgAAAAID/fwCAAAAAgP9/AID/f/9/AAD/vwCAAAD/////AAAAgP9/AIAAgAAA////////AID/fwCA//8AgP9/AID//wCA/38AgP9//38AAP+//3//fwAA/7//f/9/AAD/v///AID/fwCA/////wAA/7//////AAD/v/////8AAP+//3//fwAA/78AAACA/38AgAAAAID/fwCAAAAAgP9/AID/////AAD/vwAAAID/fwCA")
 }]
 
+[sub_resource type="SphereMesh" id="SphereMesh_bah7m"]
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_r0x5m"]
 metallic = 1.0
 roughness = 0.0
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_joorw"]
-size = Vector3(3.2822266, 4.263672, 3.6933594)
+[sub_resource type="BoxMesh" id="BoxMesh_bah7m"]
+size = Vector3(0.34594727, 0.18579102, 1.3676758)
 
-[node name="RootWorld" type="Node3D" unique_id=546022045]
+[node name="RootWorld" type="Node3D" unique_id=546022045 node_paths=PackedStringArray("actor")]
 script = ExtResource("1_3mrqo")
+actor = NodePath("Actor3")
 metadata/_custom_type_script = "uid://c6xqis34sgipu"
+
+[node name="RTScene" type="Node" parent="." unique_id=1621420968]
+script = ExtResource("8_fv4w7")
+metadata/_custom_type_script = "uid://5ao4sxv5tx2c"
 
 [node name="Control" type="Control" parent="." unique_id=1311164112]
 layout_mode = 3
@@ -76,19 +123,21 @@ script = ExtResource("5_r0x5m")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2107406426]
 environment = SubResource("Environment_3mrqo")
 camera_attributes = SubResource("CameraAttributesPractical_t88pq")
+compositor = SubResource("Compositor_kva58")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=113069508]
 transform = Transform3D(-0.7890841, -0.3227895, 0.5226407, 0, 0.8508111, 0.5254717, -0.6142853, 0.41464132, -0.67136145, 0, 0, 0)
-shadow_enabled = true
+script = SubResource("GDScript_bah7m")
 
 [node name="ReflectionProbe" type="ReflectionProbe" parent="." unique_id=778356333]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.766125, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7661247, 0)
 size = Vector3(48.956055, 30.8833, 58.90918)
 box_projection = true
 enable_shadows = true
 ambient_mode = 0
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=935664930]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 0)
 visible = false
 use_collision = true
 metadata/_edit_group_ = true
@@ -125,6 +174,7 @@ camera_attributes = SubResource("CameraAttributesPractical_t88pq")
 data = ExtResource("6_r0x5m")
 
 [node name="LightmapGI" type="LightmapGI" parent="." unique_id=494752224]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 0)
 quality = 2
 directional = true
 max_texture_size = 4096
@@ -136,21 +186,26 @@ metadata/_edit_group_ = true
 [node name="CSGBakedMeshInstance3D" type="MeshInstance3D" parent="LightmapGI" unique_id=1640338897]
 mesh = SubResource("ArrayMesh_3mrqo")
 
-[node name="Actor" type="Node3D" parent="." unique_id=1757759563]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.3261375, 3.5271769, 0)
+[node name="Actor2" type="Node3D" parent="." unique_id=618519428]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.3261375, -0.784698, -1.0085232)
 script = ExtResource("2_u44n3")
 UniqueId = &"17302838630"
 Tags = []
 metadata/_custom_type_script = "uid://dv68x3tly8mgk"
 
-[node name="CSGSphere3D" type="CSGSphere3D" parent="Actor" unique_id=901665912]
-gi_mode = 2
-use_collision = true
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Actor2" unique_id=1595090182]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.40908194, 0, 0)
+mesh = SubResource("SphereMesh_bah7m")
 
-[node name="CSGBox3D" type="CSGBox3D" parent="Actor" unique_id=1780909357]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.40908203, 0, 0)
-gi_mode = 2
-size = Vector3(0.9181641, 0.1, 0.1)
+[node name="Actor" type="Node3D" parent="." unique_id=1757759563]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.3261375, -0.784698, 0)
+script = ExtResource("2_u44n3")
+UniqueId = &"17302838630"
+Tags = []
+metadata/_custom_type_script = "uid://dv68x3tly8mgk"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Actor" unique_id=1956712878]
+mesh = SubResource("SphereMesh_bah7m")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=280669450]
 transform = Transform3D(0.93087655, 0, 0.3653339, 0, 1, 0, -0.3653339, 0, 0.93087655, 3.262526, 4.1647053, 7.2274666)
@@ -158,7 +213,7 @@ visible = false
 current = true
 
 [node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=2089750399]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.013517, 5.577462, 0.4384389)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.013517, 1.5774622, 0.4384389)
 light_intensity_lumens = 100.0
 light_color = Color(1, 0.029999971, 0.029999971, 1)
 light_energy = 100000.0
@@ -167,17 +222,23 @@ shadow_enabled = true
 omni_range = 19.448477
 
 [node name="CSGSphere3D" type="CSGSphere3D" parent="." unique_id=1253503151]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.3998713, -1.5842061)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3998713, -1.5842061)
 gi_mode = 0
 radial_segments = 32
 rings = 16
 material = SubResource("StandardMaterial3D_r0x5m")
 
-[node name="LoadTrigger" type="Area3D" parent="." unique_id=258332871]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.2437725, 4.6834316, 9.536743e-07)
-script = ExtResource("7_3mrqo")
-metadata/_custom_type_script = "uid://cva0x15bjia4v"
+[node name="Actor3" type="Node3D" parent="." unique_id=684896334]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.203712, -0.26008177, 12.3494)
+script = ExtResource("2_u44n3")
+UniqueId = &"17302838630"
+Tags = []
+metadata/_custom_type_script = "uid://dv68x3tly8mgk"
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="LoadTrigger" unique_id=859181325]
-shape = SubResource("BoxShape3D_joorw")
-debug_color = Color(0, 11.618606, 13.50434, 0.41960785)
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Actor3" unique_id=1778653800]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.40908194, 0, 0)
+mesh = SubResource("SphereMesh_bah7m")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="Actor3" unique_id=1905592690]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4090824, 0, 0.29125977)
+mesh = SubResource("BoxMesh_bah7m")

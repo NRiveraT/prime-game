@@ -4,6 +4,7 @@ using Prime.Source.Interfaces;
 
 namespace Prime.Source.Core.Actor;
 
+[Tool]
 [GlobalClass]
 public partial class Actor : Node3D, IActor
 {
@@ -13,6 +14,8 @@ public partial class Actor : Node3D, IActor
 	public override void _EnterTree()
 	{
 		Ready += ActorIsReady;
+		
+		if (Engine.IsEditorHint()) InitializeComponents();
 	}
 
 	public override void _ExitTree()
@@ -44,6 +47,11 @@ public partial class Actor : Node3D, IActor
 	public virtual Vector3 GetVelocity()
 	{
 		return Vector3.Zero;
+	}
+
+	public virtual void InitializeComponents()
+	{
+		
 	}
 
 	public virtual void ResolveActorCollision(Node body)

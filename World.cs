@@ -7,12 +7,14 @@ using Pawn = Prime.Source.Core.Actor.Pawn;
 
 namespace Prime;
 
-
 [GlobalClass]
 public partial class World : Node3D
 {
-    [Signal] public delegate void WorldReadyEventHandler();
-    
+    [Signal]
+    public delegate void WorldReadyEventHandler();
+
+    [Export] public Actor actor { get; set; }
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -20,12 +22,21 @@ public partial class World : Node3D
         // CallDeferred(Node.MethodName.Reparent, GameManagerClass.Instance);
         GameBase.ActiveWorld = this;
 
-        Ready += PostReady;
+        GD.Print(Engine.GetVersionInfo());
     }
-    
-    void PostReady()
+
+    public override void _Process(double delta)
+    {
+        if (actor != null)
+        {
+            actor.RotateY(1 * (float)delta);
+        }
+    }
+
+    public void InitializeWorld()
     {
         CallDeferred(Node.MethodName.Reparent, GameBase.Instance);
         EmitSignal(SignalName.WorldReady);
+        GD.Print("World Ready!");
     }
 }

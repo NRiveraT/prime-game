@@ -10,60 +10,64 @@ namespace Prime.Source.Core.Actor;
 public delegate void ActorHitEventHandler(IActor actor, IActor other, Vector3 hitPoint);
 
 [GlobalClass]
+[Tool]
 public partial class Character : Pawn
 {
-    [Export] protected CharacterBody3D Body { get; private set; }
-
     [Export] public StateMachine.StateMachine StateMachine { get; set; }
 
-    private CollisionShape3D _collisionShape;
+    [Export] public CharacterBody3D Test { get; set; }
+
+    [Export] protected CharacterBody3D CharacterBody;
+    [Export] protected CollisionShape3D CollisionShape;
+
+    public override void _EnterTree()
+    {
+        if (Engine.IsEditorHint())
+        {
+            CallDeferred(MethodName.InitializeComponents);
+        }
+    }
+
+    public override void InitializeComponents()
+    {
+        if (CharacterBody != null) return;
+
+        // Init CharacterBody
+        CharacterBody = new CharacterBody3D();
+        CharacterBody.Name = "CharacterBody";
+        AddChild(CharacterBody);
+        CharacterBody.Owner = GetTree().EditedSceneRoot;
+
+        if (CollisionShape != null) return;
+
+        // Init CharacterCollider
+        CollisionShape = new CollisionShape3D();
+        CollisionShape.Name = "Collider";
+        CollisionShape.Shape = new CapsuleShape3D();
+        CharacterBody.AddChild(CollisionShape);
+        CollisionShape.Owner = GetTree().EditedSceneRoot;
+    }
 
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
-        if (Body == null)
-        {
-            CharacterBody3D body = GetNode<CharacterBody3D>("CharacterBody3D");
-            if (body != null)
-            {
-                Body = body;
-            }
-            else
-            {
-                Debug.Assert(false, "Character must have a CharacterBody3D node");
-            }
-        }
-        else
-        {
-            if (_collisionShape == null)
-            {
-                CollisionShape3D collisionShape = Body.GetNode<CollisionShape3D>("CollisionShape3D");
-                if (collisionShape != null)
-                {
-                    _collisionShape = collisionShape;
-                }
-                else
-                {
-                    Debug.Assert(false, "Character must have a CollisionShape3D node");
-                }
-            }
-        }
         base._Ready();
     }
 
     public override void _Process(double delta)
     {
         base._Process(delta);
-        if (Body != null)
-        {
-            if (!Body.IsSetAsTopLevel())
-            {
-                GD.Print("Forced it to be TopLevel: " + Body.IsSetAsTopLevel());
 
-                Body.SetAsTopLevel(true);
+        if (CharacterBody != null)
+        {
+            if (!CharacterBody.IsSetAsTopLevel())
+            {
+                GD.Print("Forced it to be TopLevel: " + CharacterBody.IsSetAsTopLevel());
+
+                CharacterBody.SetAsTopLevel(true);
             }
 
-            GlobalTransform = Body.GlobalTransform;
+            GlobalTransform = CharacterBody.GlobalTransform;
         }
     }
 
@@ -71,20 +75,20 @@ public partial class Character : Pawn
     {
         base.ActorIsReady();
 
-        if (Body != null)
+        if (CharacterBody != null)
         {
             GD.Print("Setting up CharacterBody3D");
 
-            Body.SetAsTopLevel(true);
-            Body.GlobalTransform = GlobalTransform;
-            GD.Print("TopLevel?: " + Body.IsSetAsTopLevel());
+            CharacterBody.SetAsTopLevel(true);
+            CharacterBody.GlobalTransform = GlobalTransform;
+            GD.Print("TopLevel?: " + CharacterBody.IsSetAsTopLevel());
         }
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
     public override void _PhysicsProcess(double delta)
     {
-        if (Body != null)
+        if (CharacterBody != null)
         {
             ResolveActorCollision(null);
         }
@@ -94,9 +98,9 @@ public partial class Character : Pawn
 
     public override Vector3 GetVelocity()
     {
-        if (Body != null)
+        if (CharacterBody != null)
         {
-            return Body.GetVelocity();
+            return CharacterBody.GetVelocity();
         }
 
         return Vector3.Zero;
@@ -104,15 +108,15 @@ public partial class Character : Pawn
 
     public override void ResolveActorCollision(Node body)
     {
-        if (Body == null) return;
-        if (_collisionShape == null) return;
+        if (CharacterBody == null) return;
+        if (CollisionShape == null) return;
 
-        for (int i = 0; i < Body.GetSlideCollisionCount(); i++)
+        for (int i = 0; i < CharacterBody.GetSlideCollisionCount(); i++)
         {
-            KinematicCollision3D col = Body.GetSlideCollision(i);
+            KinematicCollision3D col = CharacterBody.GetSlideCollision(i);
             if (col.GetCollider() is Node3D hit)
             {
-                if (hit is Actor hitActor)
+                if (hit is IActor hitActor)
                 {
                     hitActor.OnActorHit(new HitInfo(col.GetPosition(), col.GetNormal(), this));
                 }

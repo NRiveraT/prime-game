@@ -13,11 +13,11 @@ public partial class GameBase : Node
     [Export(PropertyHint.File)] public PackedScene PlayerCharacterScene { private get; set; }
 
     public static World ActiveWorld { get; set; }
-    
+
     private Character PlayerCharacter { get; set; }
     private static PlayerController PlayerController { get; set; }
-
-    public override void _Ready()
+    
+    public override void _EnterTree()
     {
         Instance = this;
 
@@ -36,14 +36,15 @@ public partial class GameBase : Node
         {
             if (ActiveWorld != null)
                 return;
-            
+
             if (child is World world)
             {
                 GD.Print("Found world!");
                 ActiveWorld = world;
-                ActiveWorld.WorldReady += GameReady;
             }
         }
+
+        CallDeferred(MethodName.GameReady);
     }
 
     void GameReady()
@@ -53,27 +54,27 @@ public partial class GameBase : Node
         if (ActiveWorld != null)
         {
             GD.Print("Game Ready, prepping world...");
-            
-            // Add the player character and player controller to the scene.
-            if (PlayerCharacter != null)
-            {
-                PlayerCharacter.UniqueId = "Player";
-                PlayerCharacter.SetPosition(new Vector3(0, 10, 0));
-                
-                AddChild(PlayerCharacter);
-            }
+            ActiveWorld.InitializeWorld();
+        }
+        
+        // Add the player character and player controller to the scene.
+        if (PlayerCharacter != null && ActiveWorld != null)
+        {
+            PlayerCharacter.UniqueId = "Player";
+            PlayerCharacter.SetPosition(new Vector3(0, 100, 0));
+            ActiveWorld.AddChild(PlayerCharacter);
+        }
 
-            if (PlayerController != null)
-            {
-                PlayerController.SetPosition(new Vector3(0, 5, 0));
+        if (PlayerController != null && ActiveWorld != null)
+        {
+            // PlayerController.SetPosition(new Vector3(0, 5, 0));
 
-                if (PlayerCharacter != null)
-                {
-                    PlayerController.Basis = new Basis(new Quaternion(PlayerController.GetActorForwardVector(), PlayerCharacter.GetActorForwardVector()));
-                }
-                
-                AddChild(PlayerController);
-            }
+            // if (PlayerCharacter != null)
+            // {
+            //     PlayerController.Basis = new Basis(new Quaternion(PlayerController.GetActorForwardVector(), PlayerCharacter.GetActorForwardVector()));
+            // }
+
+            ActiveWorld.AddChild(PlayerController);
         }
     }
 
@@ -83,7 +84,7 @@ public partial class GameBase : Node
         {
             return Instance.PlayerCharacter;
         }
-        
+
         return null;
     }
 
@@ -93,7 +94,7 @@ public partial class GameBase : Node
         {
             return PlayerController;
         }
-        
+
         return null;
     }
 }
