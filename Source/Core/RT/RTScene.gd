@@ -27,6 +27,12 @@ var _entries: Array[BLASEntry] = []
 var _deferred_frees: Array[RID] = []  # RIDs freed after new TLAS is swapped in
 @export var directional_light: DirectionalLight3D = null
 
+# WorldEnvironment-derived lighting cached at scan time.
+# sky_energy_multiplier: background_energy_multiplier from Environment (0 = black sky).
+# ambient_light: ambient_light_color * ambient_light_energy — flat ambient term.
+var sky_energy_multiplier: float = 1.0
+var ambient_light: Vector3 = Vector3(0.0, 0.0, 0.0)
+
 # Geometry SSBOs — double-buffered alongside the TLAS so the hit shader always
 # sees vertex data that matches the currently-bound TLAS instance ordering.
 var geom_vertex_ssbo:    RID  # flat packed xyz floats for all instances (object space)
@@ -63,6 +69,9 @@ static var instance : RTScene
 enum BuildState { IDLE, BLAS_PENDING, TLAS_PENDING, READY }
 var build_state: BuildState = BuildState.IDLE
 var _last_frame_ticked: int = -1
+# When true, TLAS_PENDING skips the SSBO/texture swap because this rebuild
+# was transform-only (geometry + materials are unchanged).
+var _skip_ssbo_swap: bool = false
 
 func _ready() -> void:
 	instance = self
@@ -126,24 +135,26 @@ func tick() -> void:
 			if tlas.is_valid(): _rd.free_rid(tlas)
 			tlas = _tlas_next
 			_tlas_next = RID()
-			# Swap geometry SSBOs together with the TLAS so they stay in sync.
-			if geom_vertex_ssbo.is_valid():   _rd.free_rid(geom_vertex_ssbo)
-			if geom_instance_ssbo.is_valid(): _rd.free_rid(geom_instance_ssbo)
-			geom_vertex_ssbo   = _geom_vertex_ssbo_next
-			geom_instance_ssbo = _geom_instance_ssbo_next
-			_geom_vertex_ssbo_next   = RID()
-			_geom_instance_ssbo_next = RID()
-			if mat_inst_ssbo.is_valid(): _rd.free_rid(mat_inst_ssbo)
-			if mat_surf_ssbo.is_valid(): _rd.free_rid(mat_surf_ssbo)
-			mat_inst_ssbo        = _mat_inst_ssbo_next
-			mat_surf_ssbo        = _mat_surf_ssbo_next
-			_mat_inst_ssbo_next  = RID()
-			_mat_surf_ssbo_next  = RID()
-			if uv_ssbo.is_valid(): _rd.free_rid(uv_ssbo)
-			uv_ssbo       = _uv_ssbo_next
-			_uv_ssbo_next = RID()
-			texture_rids       = _texture_rids_next
-			_texture_rids_next = []
+			if not _skip_ssbo_swap:
+				# Full rebuild — swap geometry, material, UV SSBOs and texture list.
+				if geom_vertex_ssbo.is_valid():   _rd.free_rid(geom_vertex_ssbo)
+				if geom_instance_ssbo.is_valid(): _rd.free_rid(geom_instance_ssbo)
+				geom_vertex_ssbo   = _geom_vertex_ssbo_next
+				geom_instance_ssbo = _geom_instance_ssbo_next
+				_geom_vertex_ssbo_next   = RID()
+				_geom_instance_ssbo_next = RID()
+				if mat_inst_ssbo.is_valid(): _rd.free_rid(mat_inst_ssbo)
+				if mat_surf_ssbo.is_valid(): _rd.free_rid(mat_surf_ssbo)
+				mat_inst_ssbo        = _mat_inst_ssbo_next
+				mat_surf_ssbo        = _mat_surf_ssbo_next
+				_mat_inst_ssbo_next  = RID()
+				_mat_surf_ssbo_next  = RID()
+				if uv_ssbo.is_valid(): _rd.free_rid(uv_ssbo)
+				uv_ssbo       = _uv_ssbo_next
+				_uv_ssbo_next = RID()
+				texture_rids       = _texture_rids_next
+				_texture_rids_next = []
+			_skip_ssbo_swap = false
 			# Only mark ready if a real TLAS was built (empty scene produces invalid RID).
 			is_ready = tlas.is_valid()
 			build_state = BuildState.READY
@@ -167,7 +178,8 @@ func tick() -> void:
 				dirty = true
 			if dirty:
 				# is_ready stays true — current TLAS is valid for this frame.
-				_rebuild_tlas()
+				# Geometry/material SSBOs are unchanged; only TLAS instance transforms need updating.
+				_rebuild_tlas(false)
 				build_state = BuildState.TLAS_PENDING
 
 
@@ -202,20 +214,18 @@ func _on_node_removing(node: Node) -> void:
 				build_state = BuildState.BLAS_PENDING
 			break
 
-func _rebuild_tlas() -> void:
+func _rebuild_tlas(rebuild_geometry: bool = true) -> void:
 	if _entries.is_empty(): return
 	var instances: Array[RDAccelerationStructureInstance] = []
 
-	# Geometry + material SSBO data built in the same pass, same ordering as TLAS.
+	# Geometry + material SSBO data — only accumulated when rebuild_geometry is true.
 	var all_verts      := PackedFloat32Array()
 	var all_uvs        := PackedFloat32Array()
-	var inst_bytes     := PackedByteArray()  # geom instance headers
-	var mat_inst_bytes := PackedByteArray()  # material instance headers: {surf_offset, surf_count}
-	var mat_surf_bytes := PackedByteArray()  # flat surface materials: {range uvec4, albedo vec4, props vec4}
+	var inst_bytes     := PackedByteArray()
+	var mat_inst_bytes := PackedByteArray()
+	var mat_surf_bytes := PackedByteArray()
 	var surf_offset_accum := 0
-
-	# Bindless texture list: index 0 = fallback white, subsequent = unique albedo textures.
-	var tex_dedup := {}           # Texture2D resource → int index
+	var tex_dedup := {}
 	var tex_rids_local: Array[RID] = [_fallback_white_tex]
 
 	for entry in _entries:
@@ -228,6 +238,9 @@ func _rebuild_tlas() -> void:
 		inst.flags     = RenderingDevice.ACCELERATION_STRUCTURE_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT
 		inst.id        = 0
 		instances.append(inst)
+
+		if not rebuild_geometry:
+			continue
 
 		# Geometry: base vertex index + count.
 		var base: int = all_verts.size() / 3
@@ -249,15 +262,12 @@ func _rebuild_tlas() -> void:
 		#         vec4  albedo                                      = 16B
 		#         vec4  props  (metallic, roughness, pad, pad)      = 16B
 		for surf in entry.surface_mats:
-			# Resolve texture index: deduplicate across all instances.
 			var tex_idx := 0
 			var tex_res: Texture2D = surf.get("texture_res", null)
 			if tex_res != null:
 				if tex_res in tex_dedup:
 					tex_idx = tex_dedup[tex_res]
 				elif tex_rids_local.size() < MAX_TEXTURES:
-					# Try sRGB view first (correct gamma for albedo); fall back to linear
-					# view if the texture format doesn't expose an sRGB variant.
 					var rd_rid := RenderingServer.texture_get_rd_texture(tex_res.get_rid(), true)
 					if not rd_rid.is_valid():
 						rd_rid = RenderingServer.texture_get_rd_texture(tex_res.get_rid(), false)
@@ -270,7 +280,7 @@ func _rebuild_tlas() -> void:
 			var so := mat_surf_bytes.size() - 48
 			mat_surf_bytes.encode_u32(so +  0, surf.start_tri)
 			mat_surf_bytes.encode_u32(so +  4, surf.end_tri)
-			mat_surf_bytes.encode_u32(so +  8, tex_idx)  # range.z = texture array index
+			mat_surf_bytes.encode_u32(so +  8, tex_idx)
 			mat_surf_bytes.encode_u32(so + 12, 0)
 			mat_surf_bytes.encode_float(so + 16, surf.albedo.r)
 			mat_surf_bytes.encode_float(so + 20, surf.albedo.g)
@@ -288,6 +298,11 @@ func _rebuild_tlas() -> void:
 	var err := _rd.tlas_build(_tlas_next, instances)
 	if err != OK:
 		push_error("[RTScene] tlas_build failed: " + str(err))
+
+	if not rebuild_geometry:
+		# Transform-only rebuild — SSBO/texture swap skipped in TLAS_PENDING.
+		_skip_ssbo_swap = true
+		return
 
 	# Pad texture list to MAX_TEXTURES so the shader always sees a full-size array.
 	while tex_rids_local.size() < MAX_TEXTURES:
@@ -455,12 +470,17 @@ func _create_fallback_white_texture() -> RID:
 	fmt.usage_bits = RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT | RenderingDevice.TEXTURE_USAGE_CAN_UPDATE_BIT
 	return _rd.texture_create(fmt, RDTextureView.new(), [PackedByteArray([255, 255, 255, 255])])
 
-# Sets sky_texture_rid from a WorldEnvironment node.
+# Sets sky_texture_rid from a WorldEnvironment node and caches energy/ambient values.
 # Priority: PanoramaSkyMaterial panorama → environment background_color → sky blue fallback.
 func _setup_sky_texture(we: WorldEnvironment) -> void:
 	var env := we.environment
 	if env == null:
 		return
+
+	# Cache sky energy and ambient from the Environment resource.
+	sky_energy_multiplier = env.background_energy_multiplier
+	var al := env.ambient_light_color
+	ambient_light = Vector3(al.r, al.g, al.b) * env.ambient_light_energy
 
 	# Try PanoramaSkyMaterial first — direct texture we can pass to the miss shader.
 	var sky := env.sky

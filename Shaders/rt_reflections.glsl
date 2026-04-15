@@ -15,11 +15,14 @@ layout(set = 0, binding = 0)  uniform accelerationStructureEXT tlas;
 layout(set = 0, binding = 1, rgba16f) uniform image2D reflection_mask;
 layout(set = 0, binding = 2)  uniform sampler2D depth_buffer;
 layout(set = 0, binding = 3)  uniform sampler2D normal_roughness_buffer;
-
-// Light data (same layout as RTShadowEffect): direction.xyz + energy, color.rgb + pad.
+// Light + environment data SSBO (48 bytes):
+//   direction_energy:  xyz = direction to light,  w = light_energy
+//   color_sky_energy:  xyz = light_color,          w = background_energy_multiplier
+//   ambient_pad:       xyz = ambient_light_color * ambient_light_energy, w = pad
 layout(set = 0, binding = 11, std430) readonly buffer LightBlock {
     vec4 direction_energy;
-    vec4 color_pad;
+    vec4 color_sky_energy;
+    vec4 ambient_pad;
 } light;
 
 layout(push_constant, std430) uniform PC {
@@ -59,6 +62,14 @@ vec3 perp(vec3 v) {
 mat3 tbn_from_normal(vec3 n) {
     vec3 t = normalize(perp(n));
     return mat3(t, cross(n, t), n);
+}
+
+// Cosine-weighted hemisphere sample (matches RTAO sampling pattern).
+vec3 cosine_hemisphere(float r1, float r2) {
+    float phi       = 6.28318530718 * r1;
+    float sin_theta = sqrt(r2);
+    float cos_theta = sqrt(1.0 - r2);
+    return vec3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
 }
 
 // GGX microfacet distribution sample (tangent space, +Z hemisphere).
@@ -112,7 +123,7 @@ void main() {
     ));
     float roughness = nr_sample.w;
 
-    if (roughness >= 0.75) {
+    if (roughness >= 0.5) {
         imageStore(reflection_mask, coord, vec4(0.0));
         return;
     }
@@ -131,15 +142,7 @@ void main() {
 
     vec3  light_dir    = light.direction_energy.xyz;
     float light_energy = light.direction_energy.w;
-    vec3  light_color  = light.color_pad.rgb;
-
-    // 4-ray tetrahedral AO hemisphere (tangent space, Y = along normal).
-    const vec3 AO_TS[4] = vec3[4](
-        vec3( 0.0,    1.0,   0.0  ),
-        vec3( 0.866,  0.5,   0.0  ),
-        vec3(-0.433,  0.5,   0.75 ),
-        vec3(-0.433,  0.5,  -0.75 )
-    );
+    vec3  light_color  = light.color_sky_energy.rgb;
 
     vec3 accum = vec3(0.0);
     for (uint i = 0u; i < n_samples; i++) {
@@ -173,18 +176,21 @@ void main() {
                 shadow_vis = probe(lit_origin, light_dir, 1000.0) * NdotL;
             }
 
-            // 4-ray AO sampling at the reflected hit point.
-            vec3  ht = normalize(perp(hit_normal));
-            vec3  hb = cross(hit_normal, ht);
+            // 2-ray cosine-weighted AO (matches RTAO sampling pattern).
+            mat3  ao_tbn = tbn_from_normal(hit_normal);
             float ao_vis = 0.0;
-            for (int ai = 0; ai < 4; ai++) {
-                vec3 ao_ws = normalize(ht * AO_TS[ai].x + hit_normal * AO_TS[ai].y + hb * AO_TS[ai].z);
-                ao_vis += probe(lit_origin, ao_ws, 1.0);
+            for (int ai = 0; ai < 2; ai++) {
+                vec3 ao_dir = normalize(ao_tbn * cosine_hemisphere(next_rand(rng), next_rand(rng)));
+                ao_vis += probe(lit_origin, ao_dir, 1.0);
             }
-            ao_vis *= 0.25;
+            ao_vis *= 0.5;
+
+            // Godot's ambient_light_color * ambient_light_energy — matches the flat
+            // ambient Godot uses when no GI (SDFGI / VoxelGI) is active.
+            vec3 godot_ambient = light.ambient_pad.xyz;
 
             sample_color = albedo * (light_energy * light_color * shadow_vis
-                                     + 0.05 * ao_vis);
+                                     + godot_ambient * ao_vis);
         }
 
         accum += sample_color;
@@ -192,8 +198,10 @@ void main() {
 
     vec3 result = accum / float(n_samples);
 
-    float spec_vis = (1.0 - alpha) * (1.0 - alpha);
-    imageStore(reflection_mask, coord, vec4(result, 1.0 + spec_vis));
+    float VdotN   = max(dot(-view_dir, normal), 0.0);
+    float fresnel  = mix(0.04, 1.0, pow(1.0 - VdotN, 5.0));
+    float spec_vis = pow(1.0 - roughness, 4.0);
+    imageStore(reflection_mask, coord, vec4(result, 1.0 + fresnel * spec_vis));
 }
 
 #[miss]
@@ -206,14 +214,23 @@ layout(location = 0) rayPayloadInEXT ReflPayload rpl;
 
 layout(set = 0, binding = 9) uniform sampler2D sky_tex;
 
+layout(set = 0, binding = 11, std430) readonly buffer LightBlock {
+    vec4 direction_energy;
+    vec4 color_sky_energy;  // w = background_energy_multiplier
+    vec4 ambient_pad;
+} light;
+
 #define PI 3.14159265358979
 
 void main() {
     vec3 dir = normalize(gl_WorldRayDirectionEXT);
     float u = atan(dir.x, -dir.z) / (2.0 * PI) + 0.5;
-    float v = acos(clamp(-dir.y, -1.0, 1.0)) / PI;
-    // ra.w = 0.0 marks a sky miss. ra.xyz = sky color (always >= 0, never the -1 sentinel).
-    rpl.ra = vec4(texture(sky_tex, vec2(u, v)).rgb, 0.0);
+    float v = clamp(acos(clamp(-dir.y, -1.0, 1.0)) / PI, 0.001, 0.999);
+    // Multiply raw sky texture by the WorldEnvironment background_energy_multiplier.
+    // When sky energy is 0, this returns black — matching what Godot renders as the background.
+    // ra.w = 0.0 marks a sky miss (never the -1 probe sentinel, regardless of sky_energy).
+    float sky_energy = light.color_sky_energy.w;
+    rpl.ra = vec4(texture(sky_tex, vec2(u, v)).rgb * sky_energy, 0.0);
 }
 
 #[closest_hit]
@@ -258,10 +275,10 @@ layout(set = 0, binding = 10, std430) readonly buffer GeomVerts {
     float data[];
 } geom_verts;
 
-// Light data: direction.xyz + energy, color.rgb + pad.
 layout(set = 0, binding = 11, std430) readonly buffer LightBlock {
     vec4 direction_energy;
-    vec4 color_pad;
+    vec4 color_sky_energy;
+    vec4 ambient_pad;
 } light;
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -273,9 +290,13 @@ void main() {
 
     SurfaceMat mat = mat_surfs.data[surf_off];
     for (uint i = 1u; i < surf_count; i++) {
-        if (mat_surfs.data[surf_off + i].range.x > uint(gl_PrimitiveID)) break;
-        mat = mat_surfs.data[surf_off + i];
+        SurfaceMat candidate = mat_surfs.data[surf_off + i];
+        if (candidate.range.x > uint(gl_PrimitiveID)) break;
+        mat = candidate;
     }
+    // Guard: if prim is beyond mat.range.y, fall back to first surface.
+    if (uint(gl_PrimitiveID) > mat.range.y && surf_count > 0u)
+        mat = mat_surfs.data[surf_off];
 
     // ── UV interpolation → albedo sample ─────────────────────────────────
     uint base_v = geom_inst.data[uint(gl_InstanceID)].x;
@@ -299,9 +320,11 @@ void main() {
     vec3 p2 = vec3(geom_verts.data[vp2],      geom_verts.data[vp2 + 1u], geom_verts.data[vp2 + 2u]);
 
     vec3 obj_normal = normalize(cross(p1 - p0, p2 - p0));
-    // mat3(gl_ObjectToWorldEXT) is the 3×3 rotation+scale part of the instance transform.
-    // For uniform scaling this correctly transforms normals; non-uniform scale is rare in game meshes.
-    vec3 normal_ws = normalize(mat3(gl_ObjectToWorldEXT) * obj_normal);
+    // Inverse-transpose correctly transforms normals under non-uniform scale.
+    mat3 m = mat3(gl_ObjectToWorldEXT);
+    vec3 normal_ws = normalize(transpose(inverse(m)) * obj_normal);
+    // Ensure the normal faces toward the incoming ray (handles back-face / inverted winding).
+    if (dot(gl_WorldRayDirectionEXT, normal_ws) > 0.0) normal_ws = -normal_ws;
 
     // ── NdotL ─────────────────────────────────────────────────────────────
     float NdotL = max(dot(normal_ws, light.direction_energy.xyz), 0.0);

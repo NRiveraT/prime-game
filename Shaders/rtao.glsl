@@ -68,7 +68,7 @@ void main() {
 
     float depth = texture(depth_buffer, screen_uv).r;
     if (depth <= 0.0001) {
-        imageStore(ao_mask, coord, vec4(0.0, 0.0, 1.0, 1.0)); // blue = sky, ao=0
+        imageStore(ao_mask, coord, vec4(1.0)); // sky pixel: fully open (ao=1)
         return;
     }
 
@@ -94,7 +94,7 @@ void main() {
     vec3 origin = world_pos + normal * 0.005; // small bias off surface
 
     // Unpack samples and frame index
-    uint n_samples   = (pc.frame_samples >> 16u) & 0xFFFFu;
+    uint n_samples   = max((pc.frame_samples >> 16u) & 0xFFFFu, 1u);
     uint frame_index = pc.frame_samples & 0xFFFFu;
 
     // Seed RNG uniquely per-pixel per-frame

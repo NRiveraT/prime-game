@@ -27,8 +27,7 @@ auto_exposure_enabled = true
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p1v5b"]
 albedo_color = Color(0.64891875, 0, 0.19354782, 1)
-metallic = 1.0
-roughness = 0.0
+roughness = 0.09
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_3mrqo"]
 lightmap_size_hint = Vector2i(2934, 2614)
@@ -179,7 +178,7 @@ shadow_enabled = true
 omni_range = 19.448477
 
 [node name="CSGSphere3D" type="CSGSphere3D" parent="." unique_id=1253503151]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2001857, 1.3998713, -1.5842061)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.670862, 1.3826479, 17.842255)
 gi_mode = 0
 radial_segments = 32
 rings = 16

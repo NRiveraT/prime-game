@@ -19,7 +19,7 @@ size = Vector3(1, 1, 0.25)
 
 [node name="Player" type="Node3D" unique_id=674941945 node_paths=PackedStringArray("CharacterBody", "CollisionShape")]
 script = ExtResource("1_fixdj")
-Speed = 8.0
+Speed = 6.0
 JumpVelocity = 8.0
 CharacterBody = NodePath("CharacterBody")
 CollisionShape = NodePath("CharacterBody/Collider")

@@ -86,8 +86,8 @@ func _build_persistent_resources() -> void:
 	ss.mag_filter = RenderingDevice.SAMPLER_FILTER_LINEAR
 	_sampler = _rd.sampler_create(ss)
 
-	# Light data SSBO: vec4(dir.xyz, energy) + vec4(color.rgb, 0) = 32 bytes.
-	_light_buf = _rd.storage_buffer_create(32)
+	# Light data SSBO: vec4(dir.xyz, energy) + vec4(color.rgb, sky_energy_mult) + vec4(ambient.rgb, 0) = 48 bytes.
+	_light_buf = _rd.storage_buffer_create(48)
 
 func _ensure_reflection_mask(size: Vector2i) -> void:
 	if _reflection_mask_tex.is_valid() and _last_size == size:
@@ -140,11 +140,13 @@ func _render_callback(p_callback_type: int, p_render_data: RenderData) -> void:
 		light_dir    = dl.global_transform.basis.z.normalized()
 		light_energy = dl.light_energy
 		light_color  = Vector3(dl.light_color.r, dl.light_color.g, dl.light_color.b)
+	var amb := sm.ambient_light
 	var light_data := PackedFloat32Array([
 		light_dir.x, light_dir.y, light_dir.z, light_energy,
-		light_color.x, light_color.y, light_color.z, 0.0
+		light_color.x, light_color.y, light_color.z, sm.sky_energy_multiplier,
+		amb.x, amb.y, amb.z, 0.0
 	])
-	_rd.buffer_update(_light_buf, 0, 32, light_data.to_byte_array())
+	_rd.buffer_update(_light_buf, 0, 48, light_data.to_byte_array())
 
 	var scene_buffers := p_render_data.get_render_scene_buffers() as RenderSceneBuffersRD
 	var scene_data    := p_render_data.get_render_scene_data()    as RenderSceneDataRD
