@@ -20,8 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Shaders\apply_rtao.glsl" />
+    <Content Include="Shaders\apply_rt_reflections.glsl" />
     <Content Include="Shaders\apply_rt_shadows.glsl" />
     <Content Include="Shaders\rtao.glsl" />
+    <Content Include="Shaders\rt_reflections.glsl" />
     <Content Include="Shaders\rt_shadows.glsl" />
   </ItemGroup>
 </Project>

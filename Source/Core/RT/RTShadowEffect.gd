@@ -2,7 +2,7 @@
 class_name RTShadowEffect
 extends CompositorEffect
 
-@export var shadow_bias: float    = 0.005
+@export var shadow_bias: float    = 0.02
 @export var max_shadow_dist: float = 200.0
 @export var ambient_floor: float  = 0.05
 

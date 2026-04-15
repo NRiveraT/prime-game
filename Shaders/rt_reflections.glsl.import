@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cbbwcyr253eux"
+path="res://.godot/imported/rt_reflections.glsl-307bfe0ff9c176f17208381af4ddfcbd.res"
+
+[deps]
+
+source_file="res://Shaders/rt_reflections.glsl"
+dest_files=["res://.godot/imported/rt_reflections.glsl-307bfe0ff9c176f17208381af4ddfcbd.res"]
+
+[params]
+

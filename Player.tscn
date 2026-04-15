@@ -4,16 +4,23 @@
 [ext_resource type="Script" uid="uid://cpdqs1g6wvuh7" path="res://Source/Player/PlayerSpringArm.cs" id="2_kpjcp"]
 [ext_resource type="Script" uid="uid://bc54vhjd4g1ij" path="res://Source/Core/StateMachine/StateMachine.cs" id="3_e80uo"]
 [ext_resource type="Script" uid="uid://bliv0xuytmxxy" path="res://Source/Player/States/PlayerMovementState.cs" id="4_cxr5p"]
+[ext_resource type="Script" uid="uid://b0rmohu0xen5b" path="res://FPSLabel.cs" id="5_cxr5p"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_cxr5p"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_yd0bt"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cxr5p"]
+albedo_color = Color(0.1510621, 1.1551381e-06, 0.70861685, 1)
+metallic_specular = 0.0
 
 [sub_resource type="PrismMesh" id="PrismMesh_fixdj"]
 size = Vector3(1, 1, 0.25)
 
 [node name="Player" type="Node3D" unique_id=674941945 node_paths=PackedStringArray("CharacterBody", "CollisionShape")]
 script = ExtResource("1_fixdj")
+Speed = 8.0
+JumpVelocity = 8.0
 CharacterBody = NodePath("CharacterBody")
 CollisionShape = NodePath("CharacterBody/Collider")
 metadata/_custom_type_script = "uid://cy1cmyg5vg3it"
@@ -26,21 +33,23 @@ shape = SubResource("CapsuleShape3D_cxr5p")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1050127326]
 mesh = SubResource("CapsuleMesh_yd0bt")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D" unique_id=798601328]
-transform = Transform3D(1.9106857e-15, -1.3113416e-07, -1, 1, 4.371139e-08, -3.821371e-15, 4.371139e-08, -1, 1.3113416e-07, -1.3113416e-07, 4.371139e-08, -0.5)
-gi_mode = 2
-mesh = SubResource("PrismMesh_fixdj")
+surface_material_override/0 = SubResource("StandardMaterial3D_cxr5p")
 
 [node name="SpringArm3D" type="SpringArm3D" parent="." unique_id=359455049]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-spring_length = 5.0
+spring_length = 0.0
 script = ExtResource("2_kpjcp")
 UseControlRotation = true
 metadata/_custom_type_script = "uid://cpdqs1g6wvuh7"
 
 [node name="Camera3D" type="Camera3D" parent="SpringArm3D" unique_id=1353069829]
 current = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SpringArm3D/Camera3D" unique_id=798601328]
+transform = Transform3D(1.9106857e-15, -1.3113416e-07, -1, 1, 4.371139e-08, -3.821371e-15, 4.371139e-08, -1, 1.3113416e-07, -1.3113416e-07, -0.59999996, -0.5)
+gi_mode = 2
+mesh = SubResource("PrismMesh_fixdj")
+surface_material_override/0 = SubResource("StandardMaterial3D_cxr5p")
 
 [node name="StateMachine" type="Node" parent="." unique_id=1455264313 node_paths=PackedStringArray("States")]
 script = ExtResource("3_e80uo")
@@ -50,3 +59,21 @@ metadata/_custom_type_script = "uid://bc54vhjd4g1ij"
 [node name="PlayerMovementState" type="Node" parent="StateMachine" unique_id=810398780]
 script = ExtResource("4_cxr5p")
 metadata/_custom_type_script = "uid://bliv0xuytmxxy"
+
+[node name="Control" type="Control" parent="." unique_id=1827574812]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Label" type="Label" parent="Control" unique_id=1624770464]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+theme_override_colors/font_color = Color(0.25025597, 0.5404259, 0.16295412, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85882354)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_constants/shadow_outline_size = 3
+theme_override_font_sizes/font_size = 24
+script = ExtResource("5_cxr5p")

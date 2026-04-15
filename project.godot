@@ -82,7 +82,6 @@ global_illumination/voxel_gi/quality=1
 environment/ssao/quality=3
 environment/ssil/quality=3
 viewport/hdr_2d=true
-anti_aliasing/quality/msaa_3d=3
 anti_aliasing/quality/use_debanding=true
 scaling_3d/mode=5
 global_illumination/sdfgi/probe_ray_count=5
