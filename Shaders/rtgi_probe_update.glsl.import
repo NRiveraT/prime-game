@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bnkls8sextlsd"
+path="res://.godot/imported/rtgi_probe_update.glsl-4f4da1fa04265b891a3f424e76daadaa.res"
+
+[deps]
+
+source_file="res://Shaders/rtgi_probe_update.glsl"
+dest_files=["res://.godot/imported/rtgi_probe_update.glsl-4f4da1fa04265b891a3f424e76daadaa.res"]
+
+[params]
+

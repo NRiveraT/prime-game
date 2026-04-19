@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cvhuacab12lot"
+path="res://.godot/imported/ddgi_irr_update.glsl-e1767b600241eb89a1a0b50dfe346a44.res"
+
+[deps]
+
+source_file="res://Shaders/ddgi_irr_update.glsl"
+dest_files=["res://.godot/imported/ddgi_irr_update.glsl-e1767b600241eb89a1a0b50dfe346a44.res"]
+
+[params]
+

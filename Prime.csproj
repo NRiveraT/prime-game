@@ -22,8 +22,23 @@
     <Content Include="Shaders\apply_rtao.glsl" />
     <Content Include="Shaders\apply_rt_reflections.glsl" />
     <Content Include="Shaders\apply_rt_shadows.glsl" />
+    <Content Include="Shaders\ddgi_apply.glsl" />
+    <Content Include="Shaders\ddgi_atlas_update.glsl" />
+    <Content Include="Shaders\ddgi_dep_update.glsl" />
+    <Content Include="Shaders\ddgi_irr_update.glsl" />
+    <Content Include="Shaders\ddgi_update.glsl" />
     <Content Include="Shaders\rtao.glsl" />
     <Content Include="Shaders\rt_reflections.glsl" />
     <Content Include="Shaders\rt_shadows.glsl" />
+    <Content Include="Source\Core\RT\DDGIEffect.gd" />
+    <Content Include="Source\Core\RT\DDGIEffect.gd.uid" />
+    <Content Include="Source\Core\RT\RTAOEffect.gd" />
+    <Content Include="Source\Core\RT\RTAOEffect.gd.uid" />
+    <Content Include="Source\Core\RT\RTReflectionEffect.gd" />
+    <Content Include="Source\Core\RT\RTReflectionEffect.gd.uid" />
+    <Content Include="Source\Core\RT\RTScene.gd" />
+    <Content Include="Source\Core\RT\RTScene.gd.uid" />
+    <Content Include="Source\Core\RT\RTShadowEffect.gd" />
+    <Content Include="Source\Core\RT\RTShadowEffect.gd.uid" />
   </ItemGroup>
 </Project>

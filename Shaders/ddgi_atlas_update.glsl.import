@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dnyidk5t2c666"
+path="res://.godot/imported/ddgi_atlas_update.glsl-f38083fe56503e9f98471543546e6b0e.res"
+
+[deps]
+
+source_file="res://Shaders/ddgi_atlas_update.glsl"
+dest_files=["res://.godot/imported/ddgi_atlas_update.glsl-f38083fe56503e9f98471543546e6b0e.res"]
+
+[params]
+

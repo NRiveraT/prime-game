@@ -2,9 +2,14 @@
 class_name RTShadowEffect
 extends CompositorEffect
 
-@export var shadow_bias: float    = 0.02
-@export var max_shadow_dist: float = 200.0
-@export var ambient_floor: float  = 0.05
+@export var shadow_bias:              float = 0.02
+@export var max_shadow_dist:          float = 200.0
+@export var ambient_floor:            float = 0.05
+@export var shadow_samples:           int   = 1
+# Multiplier applied to each local light's range for shadow tracing.
+# 1.0 = match illumination range exactly.
+# >1.0 = shadow extends past attenuation edge with smooth falloff.
+@export var local_shadow_range_mult:  float = 1.3
 
 var _rd: RenderingDevice
 
@@ -17,9 +22,10 @@ var _comp_shader:   RID
 var _comp_pipeline: RID
 
 # Persistent resources
-var _shadow_mask_tex: RID
-var _light_buf:       RID
-var _sampler:         RID
+var _shadow_mask_tex:  RID
+var _light_buf:        RID
+var _local_lights_buf: RID
+var _sampler:          RID
 var _last_size:       Vector2i = Vector2i(0, 0)
 
 func _init() -> void:
@@ -89,8 +95,10 @@ func _build_persistent_resources() -> void:
 	ss.mag_filter = RenderingDevice.SAMPLER_FILTER_LINEAR
 	_sampler = _rd.sampler_create(ss)
 
-	# Light data SSBO — 2x vec4 = 32 bytes
-	_light_buf = _rd.storage_buffer_create(32)
+	# Light data SSBO — 3x vec4 = 48 bytes
+	_light_buf = _rd.storage_buffer_create(48)
+	# Local lights SSBO — 16-byte header + 32 * 64-byte RTLight entries
+	_local_lights_buf = _rd.storage_buffer_create(2064)
 
 func _ensure_shadow_mask(size: Vector2i) -> void:
 	if _shadow_mask_tex.is_valid() and _last_size == size:
@@ -139,16 +147,23 @@ func _render_callback(p_callback_type: int, p_render_data: RenderData) -> void:
 	var light_dir    := Vector3(0.0, 1.0, 0.0)
 	var light_energy := 1.0
 	var light_color  := Vector3(1.0, 1.0, 1.0)
+	var dir_sin_ha   := 0.0
 	if dl != null:
 		light_dir    = dl.global_transform.basis.z.normalized()
 		light_energy = dl.light_energy
 		light_color  = Vector3(dl.light_color.r, dl.light_color.g, dl.light_color.b)
+		dir_sin_ha   = sin(deg_to_rad(dl.light_angular_distance))
 
+	var frame_idx := float(Engine.get_frames_drawn() & 0xFFFF)
 	var light_data := PackedFloat32Array([
-	light_dir.x, light_dir.y, light_dir.z, light_energy,
-	light_color.x, light_color.y, light_color.z, 0.0
+		light_dir.x, light_dir.y, light_dir.z, light_energy,
+		light_color.x, light_color.y, light_color.z, dir_sin_ha,
+		frame_idx, float(shadow_samples), max(local_shadow_range_mult, 1.0), 0.0
 	])
-	_rd.buffer_update(_light_buf, 0, 32, light_data.to_byte_array())
+	_rd.buffer_update(_light_buf, 0, 48, light_data.to_byte_array())
+
+	var ll_bytes := _build_local_lights_bytes(sm.local_lights)
+	_rd.buffer_update(_local_lights_buf, 0, ll_bytes.size(), ll_bytes)
 
 	# Build push constant — exactly 128 bytes (32 floats)
 	var proj: Projection = scene_data.get_cam_projection()
@@ -225,8 +240,13 @@ func _render_callback(p_callback_type: int, p_render_data: RenderData) -> void:
 	u_light.binding = 4
 	u_light.add_id(_light_buf)
 
+	var u_local_lights := RDUniform.new()
+	u_local_lights.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
+	u_local_lights.binding = 5
+	u_local_lights.add_id(_local_lights_buf)
+
 	var rt_set := _rd.uniform_set_create(
-	[u_tlas, u_mask, u_depth, u_normal, u_light], _rt_shader, 0
+	[u_tlas, u_mask, u_depth, u_normal, u_light, u_local_lights], _rt_shader, 0
 	)
 
 	var rt_list := _rd.raytracing_list_begin()
@@ -266,6 +286,49 @@ func _render_callback(p_callback_type: int, p_render_data: RenderData) -> void:
 	_rd.compute_list_end()
 	_rd.free_rid(comp_set)
 
+func _build_local_lights_bytes(lights: Array) -> PackedByteArray:
+	const MAX_LOCAL := 32
+	var bytes := PackedByteArray()
+	bytes.resize(16 + MAX_LOCAL * 64)
+	bytes.fill(0)
+	var count := 0
+	for lgt in lights:
+		if count >= MAX_LOCAL: break
+		if not is_instance_valid(lgt): continue
+		var off := 16 + count * 64
+		var pos: Vector3 = lgt.global_position
+		var range_val : float = lgt.omni_range if lgt is OmniLight3D else lgt.spot_range
+		bytes.encode_float(off +  0, pos.x)
+		bytes.encode_float(off +  4, pos.y)
+		bytes.encode_float(off +  8, pos.z)
+		bytes.encode_float(off + 12, range_val)
+		var col: Color = lgt.light_color
+		bytes.encode_float(off + 16, col.r)
+		bytes.encode_float(off + 20, col.g)
+		bytes.encode_float(off + 24, col.b)
+		bytes.encode_float(off + 28, lgt.light_energy)
+		var fwd     := Vector3.ZERO
+		var cos_out := 0.0
+		var cos_in  := 0.0
+		var ltype   := 0.0
+		if lgt is SpotLight3D:
+			ltype   = 1.0
+			fwd     = -lgt.global_transform.basis.z
+			var oa  : float = lgt.spot_angle
+			cos_out = cos(deg_to_rad(oa))
+			cos_in  = cos(deg_to_rad(oa * 0.85))
+		bytes.encode_float(off + 32, fwd.x)
+		bytes.encode_float(off + 36, fwd.y)
+		bytes.encode_float(off + 40, fwd.z)
+		bytes.encode_float(off + 44, lgt.light_size)
+		bytes.encode_float(off + 48, cos_out)
+		bytes.encode_float(off + 52, cos_in)
+		bytes.encode_float(off + 56, ltype)
+		bytes.encode_float(off + 60, 0.0)
+		count += 1
+	bytes.encode_u32(0, count)
+	return bytes
+
 func _extract_section(src: String, start_tag: String, end_tag: String) -> String:
 	var start_idx := src.find(start_tag)
 	if start_idx == -1:
@@ -280,9 +343,10 @@ func _extract_section(src: String, start_tag: String, end_tag: String) -> String
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
-		if _shadow_mask_tex.is_valid(): _rd.free_rid(_shadow_mask_tex)
-		if _light_buf.is_valid():       _rd.free_rid(_light_buf)
-		if _sampler.is_valid():         _rd.free_rid(_sampler)
+		if _shadow_mask_tex.is_valid():  _rd.free_rid(_shadow_mask_tex)
+		if _light_buf.is_valid():        _rd.free_rid(_light_buf)
+		if _local_lights_buf.is_valid(): _rd.free_rid(_local_lights_buf)
+		if _sampler.is_valid():          _rd.free_rid(_sampler)
 		if _rt_pipeline.is_valid():     _rd.free_rid(_rt_pipeline)
 		if _rt_shader.is_valid():       _rd.free_rid(_rt_shader)
 		if _comp_pipeline.is_valid():   _rd.free_rid(_comp_pipeline)

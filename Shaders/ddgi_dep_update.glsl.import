@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://ca1fswq4cxche"
+path="res://.godot/imported/ddgi_dep_update.glsl-8ae7881dc73974e269a0ca5691bd41cd.res"
+
+[deps]
+
+source_file="res://Shaders/ddgi_dep_update.glsl"
+dest_files=["res://.godot/imported/ddgi_dep_update.glsl-8ae7881dc73974e269a0ca5691bd41cd.res"]
+
+[params]
+

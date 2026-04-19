@@ -26,12 +26,19 @@ class BLASEntry:
 var _entries: Array[BLASEntry] = []
 var _deferred_frees: Array[RID] = []  # RIDs freed after new TLAS is swapped in
 @export var directional_light: DirectionalLight3D = null
+var local_lights: Array = []  # OmniLight3D + SpotLight3D nodes
 
 # WorldEnvironment-derived lighting cached at scan time.
 # sky_energy_multiplier: background_energy_multiplier from Environment (0 = black sky).
 # ambient_light: ambient_light_color * ambient_light_energy — flat ambient term.
-var sky_energy_multiplier: float = 1.0
-var ambient_light: Vector3 = Vector3(0.0, 0.0, 0.0)
+var sky_energy_multiplier:   float = 1.0
+var ambient_light:           Vector3 = Vector3(0.0, 0.0, 0.0)
+var tonemap_exposure:        float = 1.0
+# Exposure normalization: converts physical light units (lux) to display-range HDR.
+# Same factor Godot applies internally via emissive_exposure_normalization.
+# Updated every frame from the cached WorldEnvironment's camera_attributes.
+var exposure_normalization: float = 1.0
+var _world_env: WorldEnvironment = null
 
 # Geometry SSBOs — double-buffered alongside the TLAS so the hit shader always
 # sees vertex data that matches the currently-bound TLAS instance ordering.
@@ -89,6 +96,8 @@ func _ready() -> void:
 func scan_scene() -> void:
 	_free_all_blas()
 	directional_light = null  # reset on rescan
+	local_lights.clear()
+	_world_env = null
 
 	var nodes: Array = []
 	_collect_all_nodes(get_tree().root, nodes)
@@ -96,8 +105,11 @@ func scan_scene() -> void:
 	for node in nodes:
 		if node is DirectionalLight3D and directional_light == null:
 			directional_light = node
-		if node is WorldEnvironment:
+		if node is WorldEnvironment and _world_env == null:
+			_world_env = node
 			_setup_sky_texture(node)
+		if node is OmniLight3D or node is SpotLight3D:
+			local_lights.append(node)
 		if node is MeshInstance3D:
 			if node.mesh == null:
 				continue
@@ -160,6 +172,7 @@ func tick() -> void:
 			build_state = BuildState.READY
 
 		BuildState.READY:
+			_update_exposure_normalization()
 			if _entries.is_empty():
 				return
 			# For rigid body motion, ONLY the TLAS instance transform changes.
@@ -184,6 +197,9 @@ func tick() -> void:
 
 
 func _on_node_added(node: Node) -> void:
+	if node is OmniLight3D or node is SpotLight3D:
+		if not local_lights.has(node):
+			local_lights.append(node)
 	if not node is MeshInstance3D:
 		return
 	# Defer: node_added fires before _ready(), so global_transform isn't valid yet
@@ -200,6 +216,8 @@ func _register_late_mesh(mi: MeshInstance3D) -> void:
 		build_state = BuildState.BLAS_PENDING  # is_ready stays true
 
 func _on_node_removing(node: Node) -> void:
+	if node is OmniLight3D or node is SpotLight3D:
+		local_lights.erase(node)
 	if not node is MeshInstance3D:
 		return
 	for i in range(_entries.size() - 1, -1, -1):
@@ -257,10 +275,12 @@ func _rebuild_tlas(rebuild_geometry: bool = true) -> void:
 		mat_inst_bytes.encode_u32(mio + 0, surf_offset_accum)
 		mat_inst_bytes.encode_u32(mio + 4, surf_count)
 
-		# Per-surface material data: 48 bytes each.
-		# Layout: uvec4 range (start_prim, end_prim, tex_idx, pad) = 16B
-		#         vec4  albedo                                      = 16B
-		#         vec4  props  (metallic, roughness, pad, pad)      = 16B
+		# Per-surface material data: 80 bytes each.
+		# Layout: uvec4 range      (start_prim, end_prim, tex_idx, pad)  = 16B
+		#         vec4  albedo                                           = 16B
+		#         vec4  props      (metallic, roughness, uvsx, uvsy)     = 16B
+		#         vec4  uv_offset  (uv_off_x, uv_off_y, pad, pad)        = 16B
+		#         vec4  emission   (rgb × energy, pad)                   = 16B
 		for surf in entry.surface_mats:
 			var tex_idx := 0
 			var tex_res: Texture2D = surf.get("texture_res", null)
@@ -276,8 +296,8 @@ func _rebuild_tlas(rebuild_geometry: bool = true) -> void:
 						tex_dedup[tex_res] = tex_idx
 						tex_rids_local.append(rd_rid)
 
-			mat_surf_bytes.resize(mat_surf_bytes.size() + 48)
-			var so := mat_surf_bytes.size() - 48
+			mat_surf_bytes.resize(mat_surf_bytes.size() + 80)
+			var so := mat_surf_bytes.size() - 80
 			mat_surf_bytes.encode_u32(so +  0, surf.start_tri)
 			mat_surf_bytes.encode_u32(so +  4, surf.end_tri)
 			mat_surf_bytes.encode_u32(so +  8, tex_idx)
@@ -288,8 +308,17 @@ func _rebuild_tlas(rebuild_geometry: bool = true) -> void:
 			mat_surf_bytes.encode_float(so + 28, surf.albedo.a)
 			mat_surf_bytes.encode_float(so + 32, surf.metallic)
 			mat_surf_bytes.encode_float(so + 36, surf.roughness)
-			mat_surf_bytes.encode_float(so + 40, 0.0)
-			mat_surf_bytes.encode_float(so + 44, 0.0)
+			mat_surf_bytes.encode_float(so + 40, surf.get("uv_scale_x", 1.0))
+			mat_surf_bytes.encode_float(so + 44, surf.get("uv_scale_y", 1.0))
+			mat_surf_bytes.encode_float(so + 48, surf.get("uv_off_x",   0.0))
+			mat_surf_bytes.encode_float(so + 52, surf.get("uv_off_y",   0.0))
+			mat_surf_bytes.encode_float(so + 56, 0.0)
+			mat_surf_bytes.encode_float(so + 60, 0.0)
+			var em: Vector3 = surf.get("emission", Vector3.ZERO)
+			mat_surf_bytes.encode_float(so + 64, em.x)
+			mat_surf_bytes.encode_float(so + 68, em.y)
+			mat_surf_bytes.encode_float(so + 72, em.z)
+			mat_surf_bytes.encode_float(so + 76, 0.0)
 		surf_offset_accum += surf_count
 
 	# Build TLAS into _tlas_next — old `tlas` stays live for this frame's RT pass.
@@ -434,9 +463,14 @@ static func _extract_surface_materials(mi: MeshInstance3D, surface_prim_counts: 
 	var tri_offset := 0
 	for s in mi.mesh.get_surface_count():
 		var count: int = surface_prim_counts[s] if s < surface_prim_counts.size() else 0
-		var albedo    := Color.WHITE
-		var metallic  := 0.0
-		var roughness := 1.0
+		var albedo     := Color.WHITE
+		var metallic   := 0.0
+		var roughness  := 1.0
+		var uv_scale_x := 1.0
+		var uv_scale_y := 1.0
+		var uv_off_x   := 0.0
+		var uv_off_y   := 0.0
+		var emission   := Vector3.ZERO
 		# Surface override takes priority over the mesh's own material.
 		var mat: Material = mi.get_surface_override_material(s)
 		if mat == null:
@@ -447,19 +481,33 @@ static func _extract_surface_materials(mi: MeshInstance3D, surface_prim_counts: 
 			metallic    = mat.metallic
 			roughness   = mat.roughness
 			texture_res = mat.albedo_texture
+			uv_scale_x  = mat.uv1_scale.x
+			uv_scale_y  = mat.uv1_scale.y
+			uv_off_x    = mat.uv1_offset.x
+			uv_off_y    = mat.uv1_offset.y
+			if mat.emission_enabled:
+				var ec : Color = mat.emission
+				var em : float = mat.emission_energy_multiplier
+				emission = Vector3(ec.r * em, ec.g * em, ec.b * em)
 		result.append({
 			"start_tri":   tri_offset,
 			"end_tri":     tri_offset + count,
 			"albedo":      albedo,
 			"metallic":    metallic,
 			"roughness":   roughness,
-			"texture_res": texture_res   # null if no texture (fallback white used)
+			"texture_res": texture_res,
+			"uv_scale_x":  uv_scale_x,
+			"uv_scale_y":  uv_scale_y,
+			"uv_off_x":    uv_off_x,
+			"uv_off_y":    uv_off_y,
+			"emission":    emission,
 		})
 		tri_offset += count
 	# Always provide at least one entry so gl_InstanceID lookups never go out of bounds.
 	if result.is_empty():
 		result.append({"start_tri": 0, "end_tri": 0x7FFFFFFF,
-					   "albedo": Color.WHITE, "metallic": 0.0, "roughness": 1.0})
+					   "albedo": Color.WHITE, "metallic": 0.0, "roughness": 1.0,
+					   "emission": Vector3.ZERO})
 	return result
 
 func _create_fallback_white_texture() -> RID:
@@ -470,6 +518,34 @@ func _create_fallback_white_texture() -> RID:
 	fmt.usage_bits = RenderingDevice.TEXTURE_USAGE_SAMPLING_BIT | RenderingDevice.TEXTURE_USAGE_CAN_UPDATE_BIT
 	return _rd.texture_create(fmt, RDTextureView.new(), [PackedByteArray([255, 255, 255, 255])])
 
+# CPU-side proxy for the diffuse sky irradiance. Ideally this would be the
+# average of a filtered cubemap; we approximate with an average over the
+# panorama (computed once at scan) or the background colour in BG_COLOR mode.
+var sky_average_color: Vector3 = Vector3(0.53, 0.81, 0.98)
+
+# Resolves the flat-ambient term shader-side value based on Godot's
+# Environment.ambient_light_source setting and ambient_light_sky_contribution
+# mix. Formula mirrors RendererSceneRenderRD:
+#   DISABLED → 0
+#   COLOR    → ambient_color × ambient_energy
+#   BG / SKY → mix(ambient_color, sky_avg × sky_energy,
+#                  sky_contribution) × ambient_energy
+# Previously we always used ambient_color, so a red ambient_light_color set
+# while the source was BG leaked into every RT surface tint.
+func _resolve_ambient_light(env: Environment) -> Vector3:
+	var c := env.ambient_light_color
+	var col_v := Vector3(c.r, c.g, c.b)
+	var ae := env.ambient_light_energy
+	match env.ambient_light_source:
+		Environment.AMBIENT_SOURCE_COLOR:
+			return col_v * ae
+		Environment.AMBIENT_SOURCE_DISABLED:
+			return Vector3.ZERO
+		_:
+			var sky_v := sky_average_color * env.background_energy_multiplier
+			var k := env.ambient_light_sky_contribution
+			return col_v.lerp(sky_v, k) * ae
+
 # Sets sky_texture_rid from a WorldEnvironment node and caches energy/ambient values.
 # Priority: PanoramaSkyMaterial panorama → environment background_color → sky blue fallback.
 func _setup_sky_texture(we: WorldEnvironment) -> void:
@@ -477,27 +553,49 @@ func _setup_sky_texture(we: WorldEnvironment) -> void:
 	if env == null:
 		return
 
-	# Cache sky energy and ambient from the Environment resource.
+	# Cache sky energy from the Environment resource.
 	sky_energy_multiplier = env.background_energy_multiplier
-	var al := env.ambient_light_color
-	ambient_light = Vector3(al.r, al.g, al.b) * env.ambient_light_energy
+	tonemap_exposure = env.tonemap_exposure
 
-	# Try PanoramaSkyMaterial first — direct texture we can pass to the miss shader.
+	# Resolve a CPU-side "average sky colour" used as a diffuse proxy for
+	# ambient when ambient_light_source is BG/SKY. Priority matches the
+	# background mode:
+	#   BG_COLOR → env.background_color
+	#   BG_SKY + PanoramaSkyMaterial → panorama resized to 1×1 (one-time avg)
+	#   otherwise → default sky blue
+	var panorama: Texture2D = null
 	var sky := env.sky
 	if sky != null and sky.sky_material is PanoramaSkyMaterial:
-		var panorama: Texture2D = (sky.sky_material as PanoramaSkyMaterial).panorama
-		if panorama != null:
-			var rd_rid := RenderingServer.texture_get_rd_texture(panorama.get_rid(), false)
-			if rd_rid.is_valid():
-				sky_texture_rid = rd_rid
-				return  # panorama found — don't create a fallback texture
+		panorama = (sky.sky_material as PanoramaSkyMaterial).panorama
+
+	if env.background_mode == Environment.BG_COLOR:
+		var bg := env.background_color
+		sky_average_color = Vector3(bg.r, bg.g, bg.b)
+	elif panorama != null:
+		var img := panorama.get_image()
+		if img != null:
+			img = img.duplicate() as Image
+			if img.is_compressed():
+				img.decompress()
+			img.resize(1, 1, Image.INTERPOLATE_LANCZOS)
+			var avg := img.get_pixel(0, 0)
+			sky_average_color = Vector3(avg.r, avg.g, avg.b)
+		else:
+			sky_average_color = Vector3(0.53, 0.81, 0.98)
+	else:
+		sky_average_color = Vector3(0.53, 0.81, 0.98)
+
+	ambient_light = _resolve_ambient_light(env)
+
+	# Try PanoramaSkyMaterial first — direct texture we can pass to the miss shader.
+	if panorama != null:
+		var rd_rid := RenderingServer.texture_get_rd_texture(panorama.get_rid(), false)
+		if rd_rid.is_valid():
+			sky_texture_rid = rd_rid
+			return  # panorama found — don't create a fallback texture
 
 	# Fall back to a 1×1 solid color using the background or sky color.
-	var sky_color := Color(0.53, 0.81, 0.98)  # default sky blue
-	if env.background_mode == Environment.BG_COLOR:
-		sky_color = env.background_color
-	elif env.background_mode == Environment.BG_SKY and sky != null:
-		sky_color = Color(0.53, 0.81, 0.98)  # sky procedural — no direct color access
+	var sky_color := Color(sky_average_color.x, sky_average_color.y, sky_average_color.z)
 	_make_sky_fallback(sky_color)
 
 func _make_sky_fallback(color: Color) -> void:
@@ -516,6 +614,51 @@ func _make_sky_fallback(color: Color) -> void:
 	_sky_fallback_tex = _rd.texture_create(fmt, RDTextureView.new(), [c])
 	sky_texture_rid   = _sky_fallback_tex
 
+func _update_exposure_normalization() -> void:
+	# Update ambient / sky / tonemap every frame — environment can change at runtime.
+	if _world_env != null and is_instance_valid(_world_env):
+		var env := _world_env.environment
+		if env != null:
+			sky_energy_multiplier = env.background_energy_multiplier
+			ambient_light    = _resolve_ambient_light(env)
+			tonemap_exposure = env.tonemap_exposure
+
+	# Resolve active camera attributes: Camera3D.attributes takes priority over
+	# WorldEnvironment.camera_attributes — this matches Godot's own lookup order.
+	var attrs: CameraAttributes = null
+	var vp := get_viewport()
+	if vp != null:
+		var cam := vp.get_camera_3d()
+		if cam != null and cam.attributes != null:
+			attrs = cam.attributes
+	if attrs == null and _world_env != null and is_instance_valid(_world_env):
+		attrs = _world_env.camera_attributes
+
+	if attrs == null:
+		exposure_normalization = 1.0
+		return
+
+	if attrs is CameraAttributesPhysical:
+		var pa := attrs as CameraAttributesPhysical
+		# Godot 4's exact physical exposure formula:
+		#   e = aperture² × shutter × (100 / ISO)
+		#   exposure_norm = 0.65 / (1.2 × e) × exposure_multiplier
+		# Matches RasterizerSceneGLES3 / RendererSceneRenderRD internal calculation,
+		# so light values we scale by this factor land on the same HDR range as the
+		# opaque scene rendered by Godot.
+		var iso: float = max(pa.exposure_sensitivity, 1.0)
+		var e: float = (pa.exposure_aperture * pa.exposure_aperture) \
+					 * pa.exposure_shutter_speed \
+					 * (100.0 / iso)
+		exposure_normalization = (0.65 / (1.2 * max(e, 1e-10))) * pa.exposure_multiplier
+	elif attrs is CameraAttributesPractical:
+		var pa := attrs as CameraAttributesPractical
+		# Practical path: lights use abstract `light_energy` directly. Exposure multiplier
+		# and sensitivity scale on top — default setup (multiplier=1, sensitivity=100)
+		# yields 1.0 so non-physical lighting is completely unchanged.
+		exposure_normalization = pa.exposure_multiplier * (pa.exposure_sensitivity / 100.0)
+	else:
+		exposure_normalization = 1.0
 func _collect_all_nodes(node: Node, out: Array) -> void:
 	out.append(node)
 	for child in node.get_children():

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://crvbaarvdtjwv"
+path="res://.godot/imported/ddgi_apply.glsl-78949f449a1ca20fc6f372aa63c45768.res"
+
+[deps]
+
+source_file="res://Shaders/ddgi_apply.glsl"
+dest_files=["res://.godot/imported/ddgi_apply.glsl-78949f449a1ca20fc6f372aa63c45768.res"]
+
+[params]
+

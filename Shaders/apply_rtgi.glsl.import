@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bamgxy1ack2jq"
+path="res://.godot/imported/apply_rtgi.glsl-df556e0963535ac17f1086e09334a247.res"
+
+[deps]
+
+source_file="res://Shaders/apply_rtgi.glsl"
+dest_files=["res://.godot/imported/apply_rtgi.glsl-df556e0963535ac17f1086e09334a247.res"]
+
+[params]
+

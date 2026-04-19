@@ -62,11 +62,16 @@ vec3 cosine_hemisphere(float r1, float r2) {
 }
 
 void main() {
+    // Dispatch runs at `gl_LaunchSizeEXT` (downsampled); `pc.screen_size` still
+    // describes the full-res G-buffer so texelFetch reads map 1:1 to G-buffer pixels.
     ivec2 coord     = ivec2(gl_LaunchIDEXT.xy);
-    vec2  screen_uv = (vec2(coord) + 0.5) / pc.screen_size;
+    vec2  rt_size   = vec2(gl_LaunchSizeEXT.xy);
+    vec2  screen_uv = (vec2(coord) + 0.5) / rt_size;
     vec2  ndc_uv    = screen_uv * 2.0 - 1.0;
+    ivec2 gb_coord  = clamp(ivec2(screen_uv * pc.screen_size),
+                            ivec2(0), ivec2(pc.screen_size) - 1);
 
-    float depth = texture(depth_buffer, screen_uv).r;
+    float depth = texelFetch(depth_buffer, gb_coord, 0).r;
     if (depth <= 0.0001) {
         imageStore(ao_mask, coord, vec4(1.0)); // sky pixel: fully open (ao=1)
         return;
@@ -82,8 +87,8 @@ void main() {
         pc.inv_view_r0.z * view_pos.x + pc.inv_view_r1.z * view_pos.y + pc.inv_view_r2.z * view_pos.z + pc.inv_view_r2.w
     );
 
-    // Normal: view space → world space
-    vec3 normal_vs = texture(normal_roughness_buffer, screen_uv).xyz * 2.0 - 1.0;
+    // Normal: view space → world space (unfiltered G-buffer fetch).
+    vec3 normal_vs = texelFetch(normal_roughness_buffer, gb_coord, 0).xyz * 2.0 - 1.0;
     vec3 normal = normalize(vec3(
         pc.inv_view_r0.x * normal_vs.x + pc.inv_view_r1.x * normal_vs.y + pc.inv_view_r2.x * normal_vs.z,
         pc.inv_view_r0.y * normal_vs.x + pc.inv_view_r1.y * normal_vs.y + pc.inv_view_r2.y * normal_vs.z,
@@ -97,8 +102,8 @@ void main() {
     uint n_samples   = max((pc.frame_samples >> 16u) & 0xFFFFu, 1u);
     uint frame_index = pc.frame_samples & 0xFFFFu;
 
-    // Seed RNG uniquely per-pixel per-frame
-    uint pixel_idx = uint(coord.x) + uint(coord.y) * uint(pc.screen_size.x);
+    // Seed RNG uniquely per-pixel per-frame (use dispatch size for stride).
+    uint pixel_idx = uint(coord.x) + uint(coord.y) * uint(rt_size.x);
     uint rng       = init_rand(pixel_idx, frame_index);
 
     float ao_accum = 0.0;

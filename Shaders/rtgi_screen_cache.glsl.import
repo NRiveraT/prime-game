@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bcf4flo1gtv4f"
+path="res://.godot/imported/rtgi_screen_cache.glsl-db63890d9de9e51a31dc569a35903c47.res"
+
+[deps]
+
+source_file="res://Shaders/rtgi_screen_cache.glsl"
+dest_files=["res://.godot/imported/rtgi_screen_cache.glsl-db63890d9de9e51a31dc569a35903c47.res"]
+
+[params]
+
